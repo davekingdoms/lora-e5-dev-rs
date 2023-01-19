@@ -20,6 +20,7 @@ lora-e5-bsp = "0.6.1"
 lm75 = "0.2.0"
 alloc-no-stdlib = "2.0.4"
 bme680 =  "0.6.0"
+shared-bus = "0.2.5"
 
 # cargo build/run
 [profile.dev]
