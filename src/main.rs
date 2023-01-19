@@ -61,7 +61,7 @@ fn main() -> ! {
     //Enable I2C
     
     let i2c = interrupt::free(|cs|{I2c2::new(i2c2, (b15,a15), 100000, &mut rcc, false, cs)});
-   
+    let bus = shared_bus::BusManagerSimple::new(i2c);
 
     let mut led = interrupt::free(|cs| led::D5::new(b5, cs));
     led.set_off();
@@ -79,18 +79,17 @@ fn main() -> ! {
     //Enable LM75A
     let all_pins_floating = 0x48;
     let address = Address::from(all_pins_floating);
-    let mut lm75a = Lm75::new(i2c, address);
+    let mut lm75a = Lm75::new(bus.acquire_i2c(), address);
     //sensor.enable().unwrap();
     let temp_celsius = lm75a.read_temperature().unwrap();
    
     
-    let i2c = lm75a.destroy();
-   
+    
 
     //BME680
    
 
-    let mut bme680 = Bme680::init(i2c, &mut delay, I2CAddress::Primary).unwrap();
+    let mut bme680 = Bme680::init(bus.acquire_i2c(), &mut delay, I2CAddress::Primary).unwrap();
     let settings = SettingsBuilder::new()
         .with_humidity_oversampling(OversamplingSetting::OS2x)
         .with_pressure_oversampling(OversamplingSetting::OS4x)
@@ -143,7 +142,7 @@ fn main() -> ! {
 
     uart.write_str(">App running..\n\r").unwrap();
    
-    //uart.write_fmt(format_args!("Temp on board: {}\n\r ",temp_celsius)).unwrap();
+    uart.write_fmt(format_args!("Temp on board: {}\n\r ",temp_celsius)).unwrap();
     uart.write_fmt(format_args!("Temperature {}°C\n\r",data.temperature_celsius())).unwrap();
    
     uart.write_fmt(format_args!("Pressure {}hPa\n\r",data.pressure_hpa())).unwrap();

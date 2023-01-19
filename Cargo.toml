@@ -19,9 +19,7 @@ panic-semihosting = "0.6.0"
 lora-e5-bsp = "0.6.1"
 lm75 = "0.2.0"
 alloc-no-stdlib = "2.0.4"
-bosch-bme680 = "0.1.0"
-bme680 = "0.6.0"
-
+bme680 =  "0.6.0"
 
 # cargo build/run
 [profile.dev]
