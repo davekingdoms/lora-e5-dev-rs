@@ -12,7 +12,7 @@ use cortex_m::{delay::Delay, interrupt};
 use cortex_m_rt::entry;
 
 use lora_e5_bsp::{
-    hal::{gpio::{PortA, PortB, pins, Output, }, pac::{self}, uart::{self, NoRx, Uart1}, util::new_delay, i2c::I2c2, adc::{Adc, self, Ts, Ch}},
+    hal::{gpio::{PortA, PortB, pins, Output, Analog}, pac::{self}, uart::{self, NoRx, Uart1}, util::new_delay, i2c::I2c2, adc::{Adc, self, Ts}},
     led,
     pb::{PushButton, D0},
 };
@@ -50,6 +50,7 @@ fn main() -> ! {
     let adc = dp.ADC;
 
     let a0 = gpioa.a0;
+    let b3 = gpiob.b3;
     let b5 = gpiob.b5;
     let b6 = gpiob.b6;
     let b15 = gpiob.b15; // SCL
@@ -72,17 +73,8 @@ fn main() -> ! {
     adc_in2.calibrate(&mut delay);
     adc_in2.set_sample_times(pins::B3::ADC_CH.mask() , Ts::MIN ,Ts::Cyc1);
     adc_in2.enable();
-
-    //adc_in2.set_max_sample_time();
-    adc_in2.start_chsel(Ch::In2.mask());
-    while Adc::isr().ccrdy().is_not_complete() {}
-    adc_in2.start_conversion();
-    while Adc::isr().eoc().is_not_complete() {}
-
-
+    let analog_pin: Analog<pins::B3> = cortex_m::interrupt::free(|cs| Analog::new(b3, cs));
     
-
-
     //Enable I2C
 
     
@@ -177,7 +169,8 @@ fn main() -> ! {
     let ir_only_raw = tsl2561.ir_raw(&mut bus.acquire_i2c()).unwrap();
     uart.write_fmt(format_args!("IR + visible (raw): {}\n\r",visible_ir_raw_light)).unwrap();
     uart.write_fmt(format_args!("IR (raw): {}\n\r",ir_only_raw)).unwrap();
-    let soil_moisture=adc_in2.data();
+ 
+    let soil_moisture: u16 = adc_in2.pin(&analog_pin);
     uart.write_fmt(format_args!("Soil Moisture (raw): {}\n\r",soil_moisture)).unwrap();
 
     
