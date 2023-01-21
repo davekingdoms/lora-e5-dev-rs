@@ -12,7 +12,7 @@ use cortex_m::{delay::Delay, interrupt};
 use cortex_m_rt::entry;
 
 use lora_e5_bsp::{
-    hal::{gpio::{PortA, PortB, pins, Output, Input, }, pac::{self}, uart::{self, NoRx, Uart1}, util::new_delay, i2c::I2c2, adc::{Adc, self}},
+    hal::{gpio::{PortA, PortB, pins, Output, }, pac::{self}, uart::{self, NoRx, Uart1}, util::new_delay, i2c::I2c2, adc::{Adc, self, Ts, Ch}},
     led,
     pb::{PushButton, D0},
 };
@@ -52,11 +52,10 @@ fn main() -> ! {
     let a0 = gpioa.a0;
     let b5 = gpiob.b5;
     let b6 = gpiob.b6;
-   // let b3 = gpiob.b3;
     let b15 = gpiob.b15; // SCL
     let a15 = gpioa.a15; // SDA
     let a9 = gpioa.a9;
-    //let a3 = gpioa.a3;
+
 
 
     rcc.cr.modify(|_, w| w.hsion().set_bit());
@@ -64,24 +63,28 @@ fn main() -> ! {
 
     let mut delay: Delay = new_delay(cp.SYST, &rcc);
 
+    //Enable 3v3 for LM75
+    let mut pwr_spply:Output<pins::A9> = cortex_m::interrupt::free(|cs| Output::default(a9, cs));
+    pwr_spply.set_level_high();
+
     //Enable ADC
     let mut adc_in2 = Adc::new(adc, adc::Clk::RccHsi, &mut rcc);
     adc_in2.calibrate(&mut delay);
+    adc_in2.set_sample_times(pins::B3::ADC_CH.mask() , Ts::MIN ,Ts::Cyc1);
     adc_in2.enable();
-    adc_in2.set_max_sample_time();
-    adc_in2.start_chsel(adc::Ch::In2.mask());
+
+    //adc_in2.set_max_sample_time();
+    adc_in2.start_chsel(Ch::In2.mask());
     while Adc::isr().ccrdy().is_not_complete() {}
     adc_in2.start_conversion();
     while Adc::isr().eoc().is_not_complete() {}
 
 
     
-    //Enable 3v3 for LM75A
-    let mut pwr_spply:Output<pins::A9> = cortex_m::interrupt::free(|cs| Output::default(a9, cs));
-    pwr_spply.set_level_high();
+
 
     //Enable I2C
-   // let soil:Input<pins::B3> = interrupt::free(|cs| Input::default(b3, cs));
+
     
     let i2c = interrupt::free(|cs|{I2c2::new(i2c2, (b15,a15), 100000, &mut rcc, false, cs)});
     let bus = shared_bus::BusManagerSimple::new(i2c);
@@ -118,16 +121,12 @@ fn main() -> ! {
     
     bme680.set_sensor_settings(&mut delay, settings).unwrap();
     let profile_duration = bme680.get_profile_dur(&settings.0).unwrap();
-
-    bme680.set_sensor_mode(&mut delay, PowerMode::ForcedMode).unwrap();
-
     Delay::delay_ms(&mut delay, profile_duration.as_millis() as u32);
-    let (data, _state) = bme680.get_sensor_data(&mut delay).unwrap();
+
 
     //TSL2561
  
     let tsl2561 = Tsl2561::new(&mut bus.acquire_i2c(), SlaveAddr::ADDR_0x29.addr()).unwrap();
-   
     tsl2561.power_on(&mut bus.acquire_i2c()).unwrap(); 
 
   
@@ -147,7 +146,6 @@ fn main() -> ! {
         log::log!("LED is OFF");
 
         n -= 1;
-
     }
 
     led.set_on();
@@ -155,7 +153,7 @@ fn main() -> ! {
 
     loop {
        
-        delay.delay_ms(1000);
+        delay.delay_ms(2000);
         if button.is_pushed(){
 
             log::log!("Button is pushed");
@@ -168,6 +166,8 @@ fn main() -> ! {
     let temp_celsius = lm75a.read_temperature().unwrap();
     uart.write_fmt(format_args!("Temp on board: {}\n\r ",temp_celsius)).unwrap();
 
+    bme680.set_sensor_mode(&mut delay, PowerMode::ForcedMode).unwrap();
+    let (data, _state) = bme680.get_sensor_data(&mut delay).unwrap();
     uart.write_fmt(format_args!("Temperature {}°C\n\r",data.temperature_celsius())).unwrap(); 
     uart.write_fmt(format_args!("Pressure {}hPa\n\r",data.pressure_hpa())).unwrap();  
     uart.write_fmt(format_args!("Humidity {}%\n\r",data.humidity_percent())).unwrap();
