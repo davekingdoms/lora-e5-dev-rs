@@ -108,7 +108,7 @@ fn main() -> ! {
 
 
     //TSL2561
-    let tsl2561 = Tsl2561::new(&mut bus.acquire_i2c(), SlaveAddr::ADDR_0x29.addr()).unwrap();
+    let tsl2561 = Tsl2561::new(&bus.acquire_i2c(), SlaveAddr::ADDR_0x29.addr()).unwrap();
     tsl2561.power_on(&mut bus.acquire_i2c()).unwrap(); 
   
     log::log!("Starting blinky"); 
