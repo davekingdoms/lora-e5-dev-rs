@@ -5,9 +5,6 @@ mod log;
 
 use core::{fmt::Write, time::Duration};
 
-
-
-//use ::alloc::{format, fmt::format};
 use cortex_m::{delay::Delay, interrupt};
 use cortex_m_rt::entry;
 
@@ -57,8 +54,6 @@ fn main() -> ! {
     let a15 = gpioa.a15; // SDA
     let a9 = gpioa.a9;
 
-
-
     rcc.cr.modify(|_, w| w.hsion().set_bit());
     while rcc.cr.read().hsirdy().is_not_ready() {}
 
@@ -87,11 +82,8 @@ fn main() -> ! {
 
     //Enable Button
     let button = cortex_m::interrupt::free(|cs| D0::new(a0, cs));
-
-   
     
     //Enable UART in transittion mode only
-   
     let mut uart: Uart1<NoRx, pins::B6> = interrupt::free(|cs|{ Uart1::new(usart1, 115_200, uart::Clk::Hsi16, &mut rcc).enable_tx(b6, cs)});
     
     //Enable LM75A
@@ -99,8 +91,7 @@ fn main() -> ! {
     let address = Address::from(all_pins_floating);
     let mut lm75a = Lm75::new(bus.acquire_i2c(), address);
 
-    //BME680
-   
+    //BME680 
     let mut bme680 = Bme680::init(bus.acquire_i2c(), &mut delay, I2CAddress::Primary).unwrap();
     let settings = SettingsBuilder::new()
         .with_humidity_oversampling(OversamplingSetting::OS2x)
@@ -117,16 +108,12 @@ fn main() -> ! {
 
 
     //TSL2561
- 
     let tsl2561 = Tsl2561::new(&mut bus.acquire_i2c(), SlaveAddr::ADDR_0x29.addr()).unwrap();
     tsl2561.power_on(&mut bus.acquire_i2c()).unwrap(); 
-
   
-    
     log::log!("Starting blinky"); 
 
     let mut n:u8 = 10;
-
     while n !=0{
         uart.write_str("***RL application starting***\n\r").unwrap();
         delay.delay_ms(100);
@@ -172,9 +159,6 @@ fn main() -> ! {
  
     let soil_moisture: u16 = adc_in2.pin(&analog_pin);
     uart.write_fmt(format_args!("Soil Moisture (raw): {}\n\r",soil_moisture)).unwrap();
-
-    
-
-    
+ 
     }
 }
