@@ -143,7 +143,7 @@ fn main() -> ! {
     uart.write_str(">App running..\n\r").unwrap();
    
     let temp_celsius = lm75a.read_temperature().unwrap();
-    uart.write_fmt(format_args!("Temp on board: {}\n\r ",temp_celsius)).unwrap();
+    uart.write_fmt(format_args!("Temp on board: {temp_celsius}\n\r ")).unwrap();
 
     bme680.set_sensor_mode(&mut delay, PowerMode::ForcedMode).unwrap();
     let (data, _state) = bme680.get_sensor_data(&mut delay).unwrap();
@@ -154,11 +154,11 @@ fn main() -> ! {
 
     let visible_ir_raw_light = tsl2561.visible_and_ir_raw(&mut bus.acquire_i2c()).unwrap();
     let ir_only_raw = tsl2561.ir_raw(&mut bus.acquire_i2c()).unwrap();
-    uart.write_fmt(format_args!("IR + visible (raw): {}\n\r",visible_ir_raw_light)).unwrap();
-    uart.write_fmt(format_args!("IR (raw): {}\n\r",ir_only_raw)).unwrap();
+    uart.write_fmt(format_args!("IR + visible (raw): {visible_ir_raw_light}\n\r")).unwrap();
+    uart.write_fmt(format_args!("IR (raw): {ir_only_raw}\n\r")).unwrap();
  
     let soil_moisture: u16 = adc_in2.pin(&analog_pin);
-    uart.write_fmt(format_args!("Soil Moisture (raw): {}\n\r",soil_moisture)).unwrap();
+    uart.write_fmt(format_args!("Soil Moisture (raw): {soil_moisture}\n\r")).unwrap();
  
     }
 }
