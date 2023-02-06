@@ -5,6 +5,7 @@ authors = ["Francesco Saccani <francesco.saccani@unipr.it>"]
 edition = "2018"
 description = "Ready to use template for flashing and debugging LoRa-E5-Dev Board"
 readme = "README.md"
+resolver = "2"
 
 [[bin]]
 name = "lora-e5-dev"
@@ -12,11 +13,11 @@ test = false
 bench = false
 
 [dependencies]
-#embassy-sync = { version = "0.1.0", git = "https://github.com/embassy-rs/embassy" }
+embassy-sync = { version = "0.1.0", git = "https://github.com/embassy-rs/embassy", features = ["nightly"] }
 embassy-executor = { version = "0.1.0", git = "https://github.com/embassy-rs/embassy", features = [ "integrated-timers"] }
 embassy-time = { version = "0.1.0", git = "https://github.com/embassy-rs/embassy", features = [  "tick-hz-32_768"] }
 embassy-stm32 = { version = "0.1.0", git = "https://github.com/embassy-rs/embassy", features = ["nightly", "stm32wle5jc", "time-driver-any"]  }
-
+embassy-embedded-hal = { version = "0.1.0", git = "https://github.com/embassy-rs/embassy", features = ["nightly"]}
 
 cortex-m = { version = "0.7.7", features = ["critical-section-single-core"] }
 cortex-m-rt = "0.7.2"
@@ -30,8 +31,7 @@ panic-semihosting = "0.6.0"
 cortex-m-semihosting = "0.5.0"
 tsl256x = "0.1.0"
 lm75 = "0.2.0"
-#log = "0.4.14"
-
+bme680 =  "0.6.0"
 
 
 # cargo build/run
