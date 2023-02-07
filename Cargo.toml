@@ -19,19 +19,20 @@ embassy-time = { version = "0.1.0", git = "https://github.com/embassy-rs/embassy
 embassy-stm32 = { version = "0.1.0", git = "https://github.com/embassy-rs/embassy", features = ["nightly", "stm32wle5jc", "time-driver-any"]  }
 embassy-embedded-hal = { version = "0.1.0", git = "https://github.com/embassy-rs/embassy", features = ["nightly"]}
 
+embassy-lora = { version = "0.1.0", git = "https://github.com/embassy-rs/embassy", features = ["stm32wl", "time"] }
+
+lorawan-device = { version = "0.8.0", default-features = false, features = ["async"] }
+lorawan = { version = "0.7.1", default-features = false, features = ["default-crypto"] }
+
 cortex-m = { version = "0.7.7", features = ["critical-section-single-core"] }
 cortex-m-rt = "0.7.2"
-#embedded-hal = "0.2.7"
-#embedded-storage = "0.3.0"
-#lora-e5-bsp = "0.6.1"
-#panic-probe = { version = "0.3", features = ["print-defmt"] }
-#futures = { version = "0.3.26", default-features = false, features = ["async-await"] }
+
 heapless = { version = "0.7.16", default-features = false }
 panic-semihosting = "0.6.0"
 cortex-m-semihosting = "0.5.0"
-tsl256x = "0.1.0"
+
 lm75 = "0.2.0"
-bme680 =  "0.6.0"
+
 
 
 # cargo build/run
