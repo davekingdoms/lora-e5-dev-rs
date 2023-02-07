@@ -24,7 +24,7 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && apt-get clean
 
 # Update default toolchain to stable.
-RUN rustup default stable \
+RUN rustup default nightly \
     # Install cargo-binutils.
     && rustup component add llvm-tools-preview \
     && cargo install cargo-binutils \
