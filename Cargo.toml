@@ -13,13 +13,13 @@ test = false
 bench = false
 
 [dependencies]
-embassy-sync = { version = "0.1.0", git = "https://github.com/embassy-rs/embassy", features = ["nightly"] }
-embassy-executor = { version = "0.1.0", git = "https://github.com/embassy-rs/embassy", features = [ "integrated-timers"] }
-embassy-time = { version = "0.1.0", git = "https://github.com/embassy-rs/embassy", features = [  "tick-hz-32_768"] }
-embassy-stm32 = { version = "0.1.0", git = "https://github.com/embassy-rs/embassy", features = ["nightly", "stm32wle5jc", "time-driver-any","unstable-pac"]  }
-embassy-embedded-hal = { version = "0.1.0", git = "https://github.com/embassy-rs/embassy", features = ["nightly"]}
+embassy-sync = { version = "0.1.0", path = "../embassy/embassy-sync", features = [ "defmt"] }
+embassy-executor = { version = "0.1.0", path = "../embassy/embassy-executor", features = ["defmt", "integrated-timers"] }
+embassy-time = { version = "0.1.0", path = "../embassy/embassy-time", features = ["defmt", "defmt-timestamp-uptime",  "tick-hz-32_768"] }
+embassy-stm32 = { version = "0.1.0", path = "../embassy/embassy-stm32", features = ["nightly", "defmt", "stm32wle5jc", "time-driver-any","unstable-pac","subghz","memory-x","exti"]  }
+embassy-embedded-hal = { version = "0.1.0", path = "../embassy/embassy-embedded-hal", features = ["nightly"]}
 
-embassy-lora = { version = "0.1.0", git = "https://github.com/embassy-rs/embassy", features = ["stm32wl", "time"] }
+embassy-lora = { version = "0.1.0", path = "../embassy/embassy-lora", features = ["stm32wl", "time", "defmt"] }
 
 lorawan-device = { version = "0.8.0", default-features = false, features = ["async"] }
 lorawan = { version = "0.7.1", default-features = false, features = ["default-crypto"] }
@@ -30,8 +30,13 @@ defmt = "0.3.2"
 defmt-rtt = "0.4.0"
 heapless = { version = "0.7.16", default-features = false }
 panic-probe ={ version = "0.3", features = ["print-defmt"] }
+futures = { version = "0.3.17", default-features = false, features = ["async-await"] }
 
 lm75 = "0.2.0"
+
+rand_core = { version = "0.6", default-features = false }
+embedded-hal = "0.2.6"
+embedded-storage = "0.3.0"
 
 
 
