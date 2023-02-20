@@ -10,7 +10,7 @@
 
 use defmt_rtt as _; // global logger
 
-use core::{cell::RefCell, fmt::Write};
+use core::{cell::RefCell};
 use embassy_embedded_hal::shared_bus::blocking::i2c::I2cDevice;
 use embassy_executor::{Spawner, _export::StaticCell};
 use embassy_lora::stm32wl::{SubGhzRadio, SubGhzRadioConfig};
@@ -26,7 +26,6 @@ use embassy_stm32::{
 };
 use embassy_sync::blocking_mutex::NoopMutex;
 use embassy_time::{Duration, Timer};
-use heapless::String;
 use lorawan_device::{async_device::{region, Device, JoinMode}};
 
 use embassy_lora::LoraTimer;
@@ -85,12 +84,12 @@ async fn main(_spawner: Spawner) {
     config.rcc.enable_lsi = true;
     let p = embassy_stm32::init(config);
  
-    let mut msg: String<64> = String::new();
+
     unsafe { pac::RCC.ccipr().modify(|w| w.set_rngsel(0b01)) }
 
     let mut led = Output::new(p.PB5, Level::High, Speed::Low);
 
-    let mut usart = UartTx::new(p.USART1, p.PB6, NoDma, Config::default());
+    let mut _usart = UartTx::new(p.USART1, p.PB6, NoDma, Config::default());
 
     let mut pwr_spply = Output::new(p.PA9, Level::Low, Speed::Low);
 
@@ -119,10 +118,6 @@ async fn main(_spawner: Spawner) {
     let ctrl1 = Output::new(p.PA4.degrade(), Level::High, Speed::High);
     let ctrl2 = Output::new(p.PA5.degrade(), Level::High, Speed::High);
 
-    //let ctrl1 = Output::new(p.PC3.degrade(), Level::High, Speed::High);
-    //let ctrl2 = Output::new(p.PC4.degrade(), Level::High, Speed::High);
-    //let ctrl3 = Output::new(p.PC5.degrade(), Level::High, Speed::High);
-
     let rfs = RadioSwitch::new(ctrl1, ctrl2);
 
     let radio = SubGhz::new(p.SUBGHZSPI, NoDma, NoDma);
@@ -145,70 +140,54 @@ async fn main(_spawner: Spawner) {
     device.set_datarate(region::DR::_0);
 
     defmt::info!("Joining LoRaWAN network");
+   
+   // 3EE746227AC7987F
+   // 70B3D57ED055AAA5
+   // 88CA9BF1D73D7EA93969C7F6ED1A686F
 
-let join =device.join(&JoinMode::OTAA{
-    deveui: [4, 0, 0, 0, 0, 0, 0, 7],
-    appeui: [4, 0, 0, 0, 0, 0, 0, 6],
-    appkey: [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-})
-        .await;
-match join{
+    let join = device.join(&JoinMode::OTAA{
+                deveui: [0x3E, 0xE7, 0x46, 0x22, 0x7A, 0xC7, 0x98, 0x7F],
+                appeui: [0x70, 0xB3, 0xD5, 0x7E, 0xD0, 0x55, 0xAA, 0xA5],
+                appkey: [0x88, 0xCA, 0x9B, 0xF1, 0xD7, 0x3D, 0x7E, 0xA9, 0x39, 0x69, 0xC7, 0xF6, 0xED, 0x1A, 0x68, 0x6F],
+            })
+            .await;
+        match join{
 
-    Ok(()) =>    defmt::info!("LoRaWAN network joined"),
+            Ok(()) =>    defmt::info!("LoRaWAN network joined"),
 
-    Err(lorawan_device::async_device::Error::NetworkNotJoined) => defmt::error!("Error NetworkNotJoined "),
-    Err(lorawan_device::async_device::Error::UnableToPreparePayload(e))=> defmt::error!("Error UnableToPreparePayload {} ",e),
-    Err(lorawan_device::async_device::Error::InvalidDevAddr) => defmt::error!("Error InvalidDevAddr "),
-    Err(lorawan_device::async_device::Error::SessionExpired) => defmt::error!("Error SessionExpired "),
-    Err(lorawan_device::async_device::Error::InvalidMic) => defmt::error!("Error InvalidMic "),
-    Err(lorawan_device::async_device::Error::UnableToDecodePayload(er)) => defmt::error!("Error UnableToDecodePayload {} ", er),
-    Err(lorawan_device::async_device::Error::Radio(h)) => defmt::error!("Error Radio {} ", h),
-    Err(lorawan_device::async_device::Error::RxTimeout) => defmt::error!("Error RxTimeout "),
-
-
-}
-
-
-
-    
- 
-/*
-  let  join = device .join(&JoinMode::OTAA {
-            deveui: [04, 00, 00, 00, 00, 00, 00, 07],
-            appeui: [04, 00, 00, 00, 00, 00, 00, 06],
-            appkey: [
-                04, 06, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00,
-            ],
-        })
-        .await;
-
-    defmt::error!("Error join {}", join);
-
-*/
+            Err(lorawan_device::async_device::Error::NetworkNotJoined) => defmt::error!("Error NetworkNotJoined "),
+            Err(lorawan_device::async_device::Error::UnableToPreparePayload(e))=> defmt::error!("Error UnableToPreparePayload {} ",e),
+            Err(lorawan_device::async_device::Error::InvalidDevAddr) => defmt::error!("Error InvalidDevAddr "),
+            Err(lorawan_device::async_device::Error::SessionExpired) => defmt::error!("Error SessionExpired "),
+            Err(lorawan_device::async_device::Error::InvalidMic) => defmt::error!("Error InvalidMic "),
+            Err(lorawan_device::async_device::Error::UnableToDecodePayload(er)) => defmt::error!("Error UnableToDecodePayload {} ", er),
+            Err(lorawan_device::async_device::Error::Radio(h)) => defmt::error!("Error Radio {} ", h),
+            Err(lorawan_device::async_device::Error::RxTimeout) => defmt::error!("Error RxTimeout "),
 
 
-    core::writeln!(&mut msg, "***--- Starting App ---***\r").unwrap();
-    usart.blocking_write(msg.as_bytes()).unwrap();
-    msg.clear();
+        }
+
+        
+
+    defmt::info!( "***--- Starting App ---***");
 
     loop {
-        core::writeln!(&mut msg, "-> App Running...\r").unwrap();
-        usart.blocking_write(msg.as_bytes()).unwrap();
-        msg.clear();
+        defmt::info!( "-> App Running...");
+
         pwr_spply.set_high();
 
-        //log::log!("high");
         led.set_high();
         Timer::after(Duration::from_millis(500)).await;
 
-        //log::log!("low");
         led.set_low();
         Timer::after(Duration::from_millis(500)).await;
 
         let temp_celsius = lm75a.read_temperature().unwrap();
-        core::writeln!(&mut msg, "Temp on board = {temp_celsius:}°C \r").unwrap();
-        usart.blocking_write(msg.as_bytes()).unwrap();
-        msg.clear();
+
+        defmt::info!("Temp on board = {}°C",temp_celsius);
+        
         pwr_spply.set_low();
+
+
     }
 }
