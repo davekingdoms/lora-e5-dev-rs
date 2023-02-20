@@ -13,13 +13,13 @@ test = false
 bench = false
 
 [dependencies]
-embassy-sync = { version = "0.1.0", path = "../embassy/embassy-sync", features = [ "defmt"] }
-embassy-executor = { version = "0.1.0", path = "../embassy/embassy-executor", features = ["defmt", "integrated-timers"] }
-embassy-time = { version = "0.1.0", path = "../embassy/embassy-time", features = ["defmt", "defmt-timestamp-uptime",  "tick-hz-32_768"] }
-embassy-stm32 = { version = "0.1.0", path = "../embassy/embassy-stm32", features = ["nightly", "defmt", "stm32wle5jc", "time-driver-any","unstable-pac","subghz","memory-x","exti"]  }
-embassy-embedded-hal = { version = "0.1.0", path = "../embassy/embassy-embedded-hal", features = ["nightly"]}
+embassy-sync = { version = "0.1.0", git = "https://github.com/davekingdoms/embassy-rs", features = [ "defmt"] }
+embassy-executor = { version = "0.1.0", git = "https://github.com/davekingdoms/embassy-rs", features = ["defmt", "integrated-timers"] }
+embassy-time = { version = "0.1.0", git = "https://github.com/davekingdoms/embassy-rs", features = ["defmt", "defmt-timestamp-uptime",  "tick-hz-32_768"] }
+embassy-stm32 = { version = "0.1.0", git = "https://github.com/davekingdoms/embassy-rs", features = ["nightly", "defmt", "stm32wle5jc", "time-driver-any","unstable-pac","subghz","memory-x","exti"]  }
+embassy-embedded-hal = { version = "0.1.0", git = "https://github.com/davekingdoms/embassy-rs", features = ["nightly"]}
 
-embassy-lora = { version = "0.1.0", path = "../embassy/embassy-lora", features = ["stm32wl", "time", "defmt"] }
+embassy-lora = { version = "0.1.0",git = "https://github.com/davekingdoms/embassy-rs", features = ["stm32wl", "time", "defmt"] }
 
 lorawan-device = { version = "0.8.0", default-features = false, features = ["async"] }
 lorawan = { version = "0.7.1", default-features = false, features = ["default-crypto"] }
