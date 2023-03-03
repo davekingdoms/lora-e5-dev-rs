@@ -22,6 +22,8 @@ alloc-no-stdlib = "2.0.4"
 bme680 =  "0.6.0"
 shared-bus = "0.2.5"
 tsl256x = "0.1.0"
+defmt = "0.3.2"
+defmt-rtt = "0.4.0"
 
 # cargo build/run
 [profile.dev]
