@@ -14,8 +14,7 @@ bench = false
 [dependencies]
 cortex-m = "0.7.6"
 cortex-m-rt = "0.7.2"
-cortex-m-semihosting = "0.5.0"
-panic-semihosting = "0.6.0"
+panic-probe ={ version = "0.3", features = ["print-defmt"] }
 lora-e5-bsp = "0.6.1"
 lm75 = "0.2.0"
 alloc-no-stdlib = "2.0.4"

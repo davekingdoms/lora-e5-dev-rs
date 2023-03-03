@@ -1,10 +1,8 @@
 #![no_std]
 #![no_main]
 
-mod log;
-
 use core::{fmt::Write, time::Duration};
-
+use defmt_rtt as _; // global logger
 use cortex_m::{delay::Delay, interrupt};
 use cortex_m_rt::entry;
 
@@ -20,7 +18,7 @@ use bme680::*   ;
 
 // Dev profile: easier to debug panics when in debug
 #[cfg(debug_assertions)]
-use panic_semihosting as _;
+use panic_probe as _; // panic handler
 
 // Release profile: minimize the binary size of the application
 #[cfg(not(debug_assertions))]
@@ -68,7 +66,7 @@ fn main() -> ! {
     adc_in2.calibrate(&mut delay);
     adc_in2.set_sample_times(pins::B3::ADC_CH.mask() , Ts::MIN ,Ts::Cyc1);
     adc_in2.enable();
-    let analog_pin: Analog<pins::B3> = cortex_m::interrupt::free(|cs| Analog::new(b3, cs));
+    let _analog_pin: Analog<pins::B3> = cortex_m::interrupt::free(|cs| Analog::new(b3, cs));
     
     //Enable I2C
 
@@ -81,7 +79,7 @@ fn main() -> ! {
     led.set_off();
 
     //Enable Button
-    let button = cortex_m::interrupt::free(|cs| D0::new(a0, cs));
+    let _button = cortex_m::interrupt::free(|cs| D0::new(a0, cs));
     
     //Enable UART in transittion mode only
     let mut uart: Uart1<NoRx, pins::B6> = interrupt::free(|cs|{ Uart1::new(usart1, 115_200, uart::Clk::Hsi16, &mut rcc).enable_tx(b6, cs)});
@@ -92,7 +90,7 @@ fn main() -> ! {
     let mut lm75a = Lm75::new(bus.acquire_i2c(), address);
 
     //BME680 
-    let mut bme680 = Bme680::init(bus.acquire_i2c(), &mut delay, I2CAddress::Primary).unwrap();
+    let mut _bme680 = Bme680::init(bus.acquire_i2c(), &mut delay, I2CAddress::Primary).unwrap();
     let settings = SettingsBuilder::new()
         .with_humidity_oversampling(OversamplingSetting::OS2x)
         .with_pressure_oversampling(OversamplingSetting::OS4x)
@@ -102,63 +100,29 @@ fn main() -> ! {
         .with_run_gas(true)
         .build();
     
-    bme680.set_sensor_settings(&mut delay, settings).unwrap();
-    let profile_duration = bme680.get_profile_dur(&settings.0).unwrap();
-    Delay::delay_ms(&mut delay, profile_duration.as_millis() as u32);
+    _bme680.set_sensor_settings(&mut delay, settings).unwrap();
+    let _profile_duration = _bme680.get_profile_dur(&settings.0).unwrap();
+    Delay::delay_ms(&mut delay, _profile_duration.as_millis() as u32);
 
 
     //TSL2561
     let tsl2561 = Tsl2561::new(&bus.acquire_i2c(), SlaveAddr::ADDR_0x29.addr()).unwrap();
     tsl2561.power_on(&mut bus.acquire_i2c()).unwrap(); 
   
-    log::log!("Starting blinky"); 
 
-    let mut n:u8 = 10;
-    while n !=0{
-        uart.write_str("***RL application starting***\n\r").unwrap();
-        delay.delay_ms(100);
-        led.set_on();
-        log::log!("LED is on");
 
-        delay.delay_ms(100);
-        led.set_off();
-        log::log!("LED is OFF");
-
-        n -= 1;
-    }
-
-    led.set_on();
-    log::log!("LED is on");
+   
 
     loop {
        
-        delay.delay_ms(2000);
-        if button.is_pushed(){
-
-            log::log!("Button is pushed");
-            led.toggle();
-
-        }
 
     uart.write_str(">App running..\n\r").unwrap();
    
     let temp_celsius = lm75a.read_temperature().unwrap();
     uart.write_fmt(format_args!("Temp on board: {temp_celsius}\n\r ")).unwrap();
 
-    bme680.set_sensor_mode(&mut delay, PowerMode::ForcedMode).unwrap();
-    let (data, _state) = bme680.get_sensor_data(&mut delay).unwrap();
-    uart.write_fmt(format_args!("Temperature {}°C\n\r",data.temperature_celsius())).unwrap(); 
-    uart.write_fmt(format_args!("Pressure {}hPa\n\r",data.pressure_hpa())).unwrap();  
-    uart.write_fmt(format_args!("Humidity {}%\n\r",data.humidity_percent())).unwrap();
-    uart.write_fmt(format_args!("Gas Resistence {}Ω\n\r",data.gas_resistance_ohm())).unwrap();
+   
 
-    let visible_ir_raw_light = tsl2561.visible_and_ir_raw(&mut bus.acquire_i2c()).unwrap();
-    let ir_only_raw = tsl2561.ir_raw(&mut bus.acquire_i2c()).unwrap();
-    uart.write_fmt(format_args!("IR + visible (raw): {visible_ir_raw_light}\n\r")).unwrap();
-    uart.write_fmt(format_args!("IR (raw): {ir_only_raw}\n\r")).unwrap();
- 
-    let soil_moisture: u16 = adc_in2.pin(&analog_pin);
-    uart.write_fmt(format_args!("Soil Moisture (raw): {soil_moisture}\n\r")).unwrap();
- 
+
     }
 }
