@@ -2,7 +2,7 @@
 name = "lora-e5-dev"
 version = "0.1.0"
 authors = ["Francesco Saccani <francesco.saccani@unipr.it>"]
-edition = "2018"
+edition = "2021"
 description = "Ready to use template for flashing and debugging LoRa-E5-Dev Board"
 readme = "README.md"
 
