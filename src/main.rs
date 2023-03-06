@@ -3,11 +3,11 @@
 
 use core::{fmt::Write, time::Duration};
 use defmt_rtt as _; // global logger
-use cortex_m::{delay::Delay, interrupt};
+use cortex_m::{delay::Delay, interrupt, prelude::_embedded_hal_serial_Read};
 use cortex_m_rt::entry;
 
 use lora_e5_bsp::{
-    hal::{gpio::{PortA, PortB, pins, Output, Analog}, pac::{self}, uart::{self, NoRx, Uart1}, util::new_delay, i2c::I2c2, adc::{Adc, self, Ts}},
+    hal::{gpio::{PortA, PortB, pins, Output, Analog}, pac::{self}, uart::{self, NoRx, Uart1,Uart2}, util::new_delay, i2c::I2c2, adc::{Adc, self, Ts},},
     led,
     pb::{PushButton, D0},
 };
@@ -41,6 +41,7 @@ fn main() -> ! {
     let gpioa: PortA = PortA::split(dp.GPIOA, &mut rcc);
 
     let usart1 = dp.USART1;
+    let usart = dp.USART2;
     let i2c2 = dp.I2C2;
     let adc = dp.ADC;
 
@@ -48,9 +49,13 @@ fn main() -> ! {
     let b3 = gpiob.b3;
     let b5 = gpiob.b5;
     let b6 = gpiob.b6;
+    let b7 = gpiob.b7;
     let b15 = gpiob.b15; // SCL
     let a15 = gpioa.a15; // SDA
+    let a2 = gpioa.a2;
+    let a3 = gpioa.a3;
     let a9 = gpioa.a9;
+
 
     rcc.cr.modify(|_, w| w.hsion().set_bit());
     while rcc.cr.read().hsirdy().is_not_ready() {}
@@ -82,7 +87,9 @@ fn main() -> ! {
     let _button = cortex_m::interrupt::free(|cs| D0::new(a0, cs));
     
     //Enable UART in transittion mode only
-    let mut uart: Uart1<NoRx, pins::B6> = interrupt::free(|cs|{ Uart1::new(usart1, 115_200, uart::Clk::Hsi16, &mut rcc).enable_tx(b6, cs)});
+   // let mut uart: Uart1<NoRx, pins::B6> = interrupt::free(|cs|{ Uart1::new(usart1, 115_200, uart::Clk::Hsi16, &mut rcc).enable_tx(b6, cs)});
+   let mut uart:Uart1<pins::B7, pins::B6> = interrupt::free(|cs|{Uart1::new(usart1, 115_200,uart::Clk::Hsi16,&mut rcc).enable_tx(b6, cs).enable_rx(b7, cs)});
+    let mut usart2:Uart2<pins::A3, pins::A2> = interrupt::free(|cs|{Uart2::new(usart, 115_200,uart::Clk::Hsi16,&mut rcc).enable_tx(a2, cs).enable_rx(a3, cs)});
     
     //Enable LM75A
     let all_pins_floating = 0x48;
@@ -117,34 +124,39 @@ fn main() -> ! {
     led.set_on();
     defmt::info!("joining");
 
-    uart.write_str("AT+UART=BR,115200\r\n").unwrap();
+    usart2.write_str("AT+UART=BR,115200\r\n").unwrap();
+  //  let mut msg = usart2.read().unwrap();
+    delay.delay_ms(1000);
+    //uart.write_fmt(format_args!("{}",msg)).unwrap();
+
+
+    usart2.write_str("AT+MODE=LWOTAA\r\n").unwrap();
+  //  msg = usart2.read().unwrap();
+  delay.delay_ms(1000);
+   // uart.write_fmt(format_args!("{}",msg)).unwrap();
+
+    usart2.write_str("AT+DR=EU868\r\n").unwrap();
     delay.delay_ms(1000);
 
-    uart.write_str("AT+MODE=LWOTAA\r\n").unwrap();
+    usart2.write_str("AT+CH=NUM,0-2\r\n").unwrap();
     delay.delay_ms(1000);
 
-    uart.write_str("AT+DR=EU868\r\n").unwrap();
+    usart2.write_str("AT+CLASS=A\r\n").unwrap();
     delay.delay_ms(1000);
 
-    uart.write_str("AT+CH=NUM,0-2\r\n").unwrap();
+    usart2.write_str("AT+PORT=8\r\n").unwrap();
     delay.delay_ms(1000);
 
-    uart.write_str("AT+CLASS=A\r\n").unwrap();
+    usart2.write_str("AT+ID=DevEui,\"70B3D57ED005B040\"\r\n").unwrap();
     delay.delay_ms(1000);
 
-    uart.write_str("AT+PORT=8\r\n").unwrap();
+    usart2.write_str("AT+ID=AppEui,\"3E46E423455675E4\"\r\n").unwrap();
     delay.delay_ms(1000);
 
-    uart.write_str("AT+ID=DevEui,\"70B3D57ED005B040\"\r\n").unwrap();
-    delay.delay_ms(1000);
-
-    uart.write_str("AT+ID=AppEui,\"3E46E423455675E4\"\r\n").unwrap();
-    delay.delay_ms(1000);
-
-    uart.write_str("AT+KEY=APPKEY,\"BDF4CF3CFE40578737D0D4323E6D3982\"\r\n").unwrap();
+    usart2.write_str("AT+KEY=APPKEY,\"BDF4CF3CFE40578737D0D4323E6D3982\"\r\n").unwrap();
     delay.delay_ms(1000);
     
-    uart.write_str("AT+JOIN\r\n").unwrap();
+    usart2.write_str("AT+JOIN\r\n").unwrap();
     led.set_off();
     delay.delay_ms(3000);
 
