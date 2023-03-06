@@ -8,7 +8,8 @@
 
 
 
-use defmt_rtt as _; // global logger
+use defmt_rtt as _;
+use futures::future::err; // global logger
 
 use core::{cell::RefCell};
 use embassy_embedded_hal::shared_bus::blocking::i2c::I2cDevice;
@@ -144,11 +145,33 @@ async fn main(_spawner: Spawner) {
    // 3EE746227AC7987F
    // 70B3D57ED055AAA5
    // 88CA9BF1D73D7EA93969C7F6ED1A686F
+   let mut deveui = [0x3E, 0xE7, 0x46, 0x22, 0x7A, 0xC7, 0x98, 0x7F];
+   let mut appeui =  [0x70, 0xB3, 0xD5, 0x7E, 0xD0, 0x55, 0xAA, 0xA5];
+   let appkey = [0x88, 0xCA, 0x9B, 0xF1, 0xD7, 0x3D, 0x7E, 0xA9, 0x39, 0x69, 0xC7, 0xF6, 0xED, 0x1A, 0x68, 0x6F];
+   deveui.reverse();
+   appeui.reverse();
+
+   while let Err(err) = device.join(&JoinMode::OTAA {deveui, appeui, appkey,}).await{
+
+   match err {
+    lorawan_device::async_device::Error::Radio(_) => defmt::error!("Join failed: Radio"),
+    lorawan_device::async_device::Error::NetworkNotJoined => {defmt::error!("Join failed: NetworkNotJoined")}
+    lorawan_device::async_device::Error::UnableToPreparePayload(_) => {defmt::error!("Join failed: UnableToPreparePayload")}
+    lorawan_device::async_device::Error::InvalidDevAddr => {defmt::error!("Join failed: InvalidDevAddr")}
+    lorawan_device::async_device::Error::RxTimeout => {defmt::error!("Join failed: RxTimeout")}
+    lorawan_device::async_device::Error::SessionExpired => {defmt::error!("Join failed: SessionExpired")}
+    lorawan_device::async_device::Error::InvalidMic => {defmt::error!("Join failed: InvalidMic")}
+    lorawan_device::async_device::Error::UnableToDecodePayload(_) => {defmt::error!("Join failed: UnableToDecodePayload")}
+   }
+    Timer::after(Duration::from_millis(5000)).await;
+}
+
+
 
     let join = device.join(&JoinMode::OTAA{
-                deveui: [0x3E, 0xE7, 0x46, 0x22, 0x7A, 0xC7, 0x98, 0x7F],
-                appeui: [0x70, 0xB3, 0xD5, 0x7E, 0xD0, 0x55, 0xAA, 0xA5],
-                appkey: [0x88, 0xCA, 0x9B, 0xF1, 0xD7, 0x3D, 0x7E, 0xA9, 0x39, 0x69, 0xC7, 0xF6, 0xED, 0x1A, 0x68, 0x6F],
+                deveui,
+                appeui,
+                appkey,
             })
             .await;
         match join{
