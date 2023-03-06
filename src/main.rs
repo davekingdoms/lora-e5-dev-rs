@@ -9,7 +9,7 @@
 
 
 use defmt_rtt as _;
-use futures::future::err; // global logger
+
 
 use core::{cell::RefCell};
 use embassy_embedded_hal::shared_bus::blocking::i2c::I2cDevice;
@@ -20,7 +20,7 @@ use embassy_stm32::{
     gpio::{AnyPin, Level, Output, Pin, Speed},
     i2c::I2c,
     interrupt::{self},
-    peripherals::{I2C2},
+    peripherals::{I2C2, RNG},
     subghz::{CalibrateImage, SubGhz},
     time::hz,
     usart::{Config, UartTx},
@@ -171,22 +171,51 @@ defmt::info!("Lorawan joined<");
 defmt::info!( "***--- Starting App ---***");
 
     loop {
-       
 
         pwr_spply.set_high();
 
         led.set_high();
+        defmt::info!("Led On");
         Timer::after(Duration::from_millis(500)).await;
 
         led.set_low();
+        defmt::info!("led off");
         Timer::after(Duration::from_millis(500)).await;
 
+        
+
         let temp_celsius = lm75a.read_temperature().unwrap();
+        let data:[u8;1] = [temp_celsius as u8];
+
+
+       // device.send(&data, 1, false);
+        sending(&mut device, &data).await;
 
         defmt::info!("Temp on board = {}°C",temp_celsius);
         
         pwr_spply.set_low();
-
+        Timer::after(Duration::from_millis(10000)).await;
 
     }
 }
+
+
+async fn sending( device: &mut lorawan_device::async_device::Device<SubGhzRadio<'_, RadioSwitch<'_>>, Crypto, LoraTimer, Rng<'_, RNG>>, data: &[u8]){
+ 
+while let Err(error) = device.send(&data, 1, false).await{
+    match error {
+        lorawan_device::async_device::Error::Radio(_) => defmt::error!("Sending failed: Radio"),
+        lorawan_device::async_device::Error::NetworkNotJoined => {defmt::error!("Sending failed: NetworkNotJoined")}
+        lorawan_device::async_device::Error::UnableToPreparePayload(_) => {defmt::error!("Sending failed: UnableToPreparePayload")}
+        lorawan_device::async_device::Error::InvalidDevAddr => {defmt::error!("Sending failed: InvalidDevAddr")}
+        lorawan_device::async_device::Error::RxTimeout => {defmt::error!("Sending failed: RxTimeout")}
+        lorawan_device::async_device::Error::SessionExpired => {defmt::error!("Sending failed: SessionExpired")}
+        lorawan_device::async_device::Error::InvalidMic => {defmt::error!("Sending failed: InvalidMic")}
+        lorawan_device::async_device::Error::UnableToDecodePayload(_) => {defmt::error!("Sending failed: UnableToDecodePayload")}
+         }
+        
+    }
+    Timer::after(Duration::from_millis(5000)).await;
+}
+ 
+
