@@ -88,7 +88,7 @@ fn main() -> ! {
     let all_pins_floating = 0x48;
     let address = Address::from(all_pins_floating);
     let mut lm75a = Lm75::new(bus.acquire_i2c(), address);
-
+/*
     //BME680 
     let mut _bme680 = Bme680::init(bus.acquire_i2c(), &mut delay, I2CAddress::Primary).unwrap();
     let settings = SettingsBuilder::new()
@@ -106,20 +106,52 @@ fn main() -> ! {
 
 
     //TSL2561
-    let tsl2561 = Tsl2561::new(&bus.acquire_i2c(), SlaveAddr::ADDR_0x29.addr()).unwrap();
-    tsl2561.power_on(&mut bus.acquire_i2c()).unwrap(); 
+   // let tsl2561 = Tsl2561::new(&bus.acquire_i2c(), SlaveAddr::ADDR_0x29.addr()).unwrap();
+   // tsl2561.power_on(&mut bus.acquire_i2c()).unwrap(); 
   
 
-
+*/
    
-
+  
     loop {
-       
+    led.set_on();
+    defmt::info!("joining");
 
-    uart.write_str(">App running..\n\r").unwrap();
+    uart.write_str("AT+UART=BR,115200\r\n").unwrap();
+    delay.delay_ms(1000);
+
+    uart.write_str("AT+MODE=LWOTAA\r\n").unwrap();
+    delay.delay_ms(1000);
+
+    uart.write_str("AT+DR=EU868\r\n").unwrap();
+    delay.delay_ms(1000);
+
+    uart.write_str("AT+CH=NUM,0-2\r\n").unwrap();
+    delay.delay_ms(1000);
+
+    uart.write_str("AT+CLASS=A\r\n").unwrap();
+    delay.delay_ms(1000);
+
+    uart.write_str("AT+PORT=8\r\n").unwrap();
+    delay.delay_ms(1000);
+
+    uart.write_str("AT+ID=DevEui,\"70B3D57ED005B040\"\r\n").unwrap();
+    delay.delay_ms(1000);
+
+    uart.write_str("AT+ID=AppEui,\"3E46E423455675E4\"\r\n").unwrap();
+    delay.delay_ms(1000);
+
+    uart.write_str("AT+KEY=APPKEY,\"BDF4CF3CFE40578737D0D4323E6D3982\"\r\n").unwrap();
+    delay.delay_ms(1000);
+    
+    uart.write_str("AT+JOIN\r\n").unwrap();
+    led.set_off();
+    delay.delay_ms(3000);
+
+
    
-    let temp_celsius = lm75a.read_temperature().unwrap();
-    uart.write_fmt(format_args!("Temp on board: {temp_celsius}\n\r ")).unwrap();
+    let _temp_celsius = lm75a.read_temperature().unwrap();
+    //uart.write_fmt(format_args!("Temp on board: {temp_celsius}\n\r ")).unwrap();
 
    
 
