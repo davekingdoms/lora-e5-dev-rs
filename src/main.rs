@@ -154,48 +154,24 @@ async fn main(_spawner: Spawner) {
    while let Err(err) = device.join(&JoinMode::OTAA {deveui, appeui, appkey,}).await{
 
    match err {
-    lorawan_device::async_device::Error::Radio(_) => defmt::error!("Join failed: Radio"),
-    lorawan_device::async_device::Error::NetworkNotJoined => {defmt::error!("Join failed: NetworkNotJoined")}
-    lorawan_device::async_device::Error::UnableToPreparePayload(_) => {defmt::error!("Join failed: UnableToPreparePayload")}
-    lorawan_device::async_device::Error::InvalidDevAddr => {defmt::error!("Join failed: InvalidDevAddr")}
-    lorawan_device::async_device::Error::RxTimeout => {defmt::error!("Join failed: RxTimeout")}
-    lorawan_device::async_device::Error::SessionExpired => {defmt::error!("Join failed: SessionExpired")}
-    lorawan_device::async_device::Error::InvalidMic => {defmt::error!("Join failed: InvalidMic")}
-    lorawan_device::async_device::Error::UnableToDecodePayload(_) => {defmt::error!("Join failed: UnableToDecodePayload")}
-   }
+            lorawan_device::async_device::Error::Radio(_) => defmt::error!("Join failed: Radio"),
+            lorawan_device::async_device::Error::NetworkNotJoined => {defmt::error!("Join failed: NetworkNotJoined")}
+            lorawan_device::async_device::Error::UnableToPreparePayload(_) => {defmt::error!("Join failed: UnableToPreparePayload")}
+            lorawan_device::async_device::Error::InvalidDevAddr => {defmt::error!("Join failed: InvalidDevAddr")}
+            lorawan_device::async_device::Error::RxTimeout => {defmt::error!("Join failed: RxTimeout")}
+            lorawan_device::async_device::Error::SessionExpired => {defmt::error!("Join failed: SessionExpired")}
+            lorawan_device::async_device::Error::InvalidMic => {defmt::error!("Join failed: InvalidMic")}
+            lorawan_device::async_device::Error::UnableToDecodePayload(_) => {defmt::error!("Join failed: UnableToDecodePayload")}
+     }
     Timer::after(Duration::from_millis(5000)).await;
 }
 
+defmt::info!("Lorawan joined<");
 
-
-    let join = device.join(&JoinMode::OTAA{
-                deveui,
-                appeui,
-                appkey,
-            })
-            .await;
-        match join{
-
-            Ok(()) =>    defmt::info!("LoRaWAN network joined"),
-
-            Err(lorawan_device::async_device::Error::NetworkNotJoined) => defmt::error!("Error NetworkNotJoined "),
-            Err(lorawan_device::async_device::Error::UnableToPreparePayload(e))=> defmt::error!("Error UnableToPreparePayload {} ",e),
-            Err(lorawan_device::async_device::Error::InvalidDevAddr) => defmt::error!("Error InvalidDevAddr "),
-            Err(lorawan_device::async_device::Error::SessionExpired) => defmt::error!("Error SessionExpired "),
-            Err(lorawan_device::async_device::Error::InvalidMic) => defmt::error!("Error InvalidMic "),
-            Err(lorawan_device::async_device::Error::UnableToDecodePayload(er)) => defmt::error!("Error UnableToDecodePayload {} ", er),
-            Err(lorawan_device::async_device::Error::Radio(h)) => defmt::error!("Error Radio {} ", h),
-            Err(lorawan_device::async_device::Error::RxTimeout) => defmt::error!("Error RxTimeout "),
-
-
-        }
-
-        
-
-    defmt::info!( "***--- Starting App ---***");
+defmt::info!( "***--- Starting App ---***");
 
     loop {
-        defmt::info!( "-> App Running...");
+       
 
         pwr_spply.set_high();
 
