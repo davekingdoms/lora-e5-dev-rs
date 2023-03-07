@@ -32,7 +32,7 @@ use lorawan_device::{async_device::{region, Device, JoinMode}};
 use embassy_lora::LoraTimer;
 use embassy_stm32::pac;
 use embassy_stm32::rng::Rng;
-use lorawan::{default_crypto::DefaultFactory as Crypto};
+use lorawan::{default_crypto::DefaultFactory as Crypto, parser::DevAddr, keys::AES128};
 
 
 //use cortex_m::interrupt::Mutex;
@@ -141,6 +141,24 @@ async fn main(_spawner: Spawner) {
     device.set_datarate(region::DR::_0);
 
     defmt::info!("Joining LoRaWAN network");
+/*
+    let  devadd:DevAddr<[u8;4]> = DevAddr::new([26,0x0B,12,0x6F]).unwrap();
+    let appskey:AES128 =  AES128([0xFC,0x01,0x98,0xB5,0xF5,0x11,0x3C,0xA7,0x0E,0xA8,0xF2,0xFF,0xEC,0xB8,0x9F,0x2A]);
+    let nwkskey:AES128 = AES128([0xE1,0x14,0xD9,0x24,0x52,0xC6,0xB9,0x27,0x62,0x95,0x2D,0xB3,0xF4,0xD1,0x10,0xA9]);
+
+    while let  Err(err) =  device.join(&JoinMode::ABP { newskey: nwkskey, appskey: appskey, devaddr: devadd }).await{
+        match err{
+            lorawan_device::async_device::Error::Radio(_) => defmt::error!("Join failed: Radio"),
+            lorawan_device::async_device::Error::NetworkNotJoined => {defmt::error!("Join failed: NetworkNotJoined")}
+            lorawan_device::async_device::Error::UnableToPreparePayload(_) => {defmt::error!("Join failed: UnableToPreparePayload")}
+            lorawan_device::async_device::Error::InvalidDevAddr => {defmt::error!("Join failed: InvalidDevAddr")}
+            lorawan_device::async_device::Error::RxTimeout => {defmt::error!("Join failed: RxTimeout")}
+            lorawan_device::async_device::Error::SessionExpired => {defmt::error!("Join failed: SessionExpired")}
+            lorawan_device::async_device::Error::InvalidMic => {defmt::error!("Join failed: InvalidMic")}
+            lorawan_device::async_device::Error::UnableToDecodePayload(_) => {defmt::error!("Join failed: UnableToDecodePayload")}
+        }
+        Timer::after(Duration::from_millis(5000)).await;
+    }*/
    
    // 3EE746227AC7987F
    // 70B3D57ED055AAA5
@@ -176,11 +194,11 @@ defmt::info!( "***--- Starting App ---***");
 
         led.set_high();
         defmt::info!("Led On");
-        Timer::after(Duration::from_millis(500)).await;
+        Timer::after(Duration::from_millis(2000)).await;
 
         led.set_low();
         defmt::info!("led off");
-        Timer::after(Duration::from_millis(500)).await;
+        Timer::after(Duration::from_millis(2000)).await;
 
         
 
@@ -195,6 +213,7 @@ defmt::info!( "***--- Starting App ---***");
         
         pwr_spply.set_low();
         Timer::after(Duration::from_millis(10000)).await;
+        
 
     }
 }
@@ -202,20 +221,20 @@ defmt::info!( "***--- Starting App ---***");
 
 async fn sending( device: &mut lorawan_device::async_device::Device<SubGhzRadio<'_, RadioSwitch<'_>>, Crypto, LoraTimer, Rng<'_, RNG>>, data: &[u8]){
  
-while let Err(error) = device.send(&data, 1, false).await{
+while let Err(error) = device.send(&data, 1, true).await{
     match error {
         lorawan_device::async_device::Error::Radio(_) => defmt::error!("Sending failed: Radio"),
         lorawan_device::async_device::Error::NetworkNotJoined => {defmt::error!("Sending failed: NetworkNotJoined")}
         lorawan_device::async_device::Error::UnableToPreparePayload(_) => {defmt::error!("Sending failed: UnableToPreparePayload")}
         lorawan_device::async_device::Error::InvalidDevAddr => {defmt::error!("Sending failed: InvalidDevAddr")}
-        lorawan_device::async_device::Error::RxTimeout => {defmt::error!("Sending failed: RxTimeout")}
+        lorawan_device::async_device::Error::RxTimeout => {defmt::error!("Sending failed: RxTimeout"); break}
         lorawan_device::async_device::Error::SessionExpired => {defmt::error!("Sending failed: SessionExpired")}
         lorawan_device::async_device::Error::InvalidMic => {defmt::error!("Sending failed: InvalidMic")}
         lorawan_device::async_device::Error::UnableToDecodePayload(_) => {defmt::error!("Sending failed: UnableToDecodePayload")}
          }
         
     }
-    Timer::after(Duration::from_millis(5000)).await;
+    Timer::after(Duration::from_millis(200000)).await;
 }
  
 
