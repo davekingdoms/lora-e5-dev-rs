@@ -9,9 +9,10 @@
 
 
 use defmt_rtt as _;
+use heapless::String;
 
 
-use core::{cell::RefCell};
+use core::{cell::RefCell, fmt::Write};
 use embassy_embedded_hal::shared_bus::blocking::i2c::I2cDevice;
 use embassy_executor::{Spawner, _export::StaticCell};
 use embassy_lora::stm32wl::{SubGhzRadio, SubGhzRadioConfig};
@@ -23,7 +24,7 @@ use embassy_stm32::{
     peripherals::{I2C2, RNG},
     subghz::{CalibrateImage, SubGhz},
     time::hz,
-    usart::{Config, UartTx},
+    usart::{Config, UartTx, Uart},
 };
 use embassy_sync::blocking_mutex::NoopMutex;
 use embassy_time::{Duration, Timer};
@@ -90,7 +91,14 @@ async fn main(_spawner: Spawner) {
 
     let mut led = Output::new(p.PB5, Level::High, Speed::Low);
 
-    let mut _usart = UartTx::new(p.USART1, p.PB6, NoDma, Config::default());
+    //let mut _usart = UartTx::new(p.USART1, p.PB6, NoDma, Config::default());
+    let mut uartconfig = Config::default();
+    uartconfig.baudrate = 9600;
+    let irquart = interrupt::take!(USART1);
+    let mut uart = Uart::new(p.USART1, p.PB7,  p.PB6, irquart, NoDma, NoDma, uartconfig);
+let irqusart2 = interrupt::take!(USART2);
+    let mut usart2 = Uart::new(p.USART2, p.PA3, p.PA2, irqusart2, NoDma, NoDma, uartconfig);
+    let mut msg: String<64> = String::new();
 
     let mut pwr_spply = Output::new(p.PA9, Level::Low, Speed::Low);
 
@@ -140,6 +148,7 @@ async fn main(_spawner: Spawner) {
 
     device.set_datarate(region::DR::_0);
 
+
     defmt::info!("Joining LoRaWAN network");
 /*
     let  devadd:DevAddr<[u8;4]> = DevAddr::new([26,0x0B,12,0x6F]).unwrap();
@@ -158,8 +167,8 @@ async fn main(_spawner: Spawner) {
             lorawan_device::async_device::Error::UnableToDecodePayload(_) => {defmt::error!("Join failed: UnableToDecodePayload")}
         }
         Timer::after(Duration::from_millis(5000)).await;
-    }*/
-   
+    }
+  */
    // 3EE746227AC7987F
    // 70B3D57ED055AAA5
    // 88CA9BF1D73D7EA93969C7F6ED1A686F
@@ -182,14 +191,67 @@ async fn main(_spawner: Spawner) {
             lorawan_device::async_device::Error::UnableToDecodePayload(_) => {defmt::error!("Join failed: UnableToDecodePayload")}
      }
     Timer::after(Duration::from_millis(5000)).await;
-}
+} 
 
 defmt::info!("Lorawan joined<");
 
 defmt::info!( "***--- Starting App ---***");
+/*
+core::write!(&mut msg, "AT\r\n").unwrap();
+usart2.blocking_write(msg.as_bytes()).unwrap();
+msg.clear();
+Timer::after(Duration::from_millis(1000)).await;
+
+core::write!(&mut msg, "AT+MODE=LWOTAA\r\n").unwrap();
+usart2.blocking_write(msg.as_bytes()).unwrap();
+msg.clear();
+Timer::after(Duration::from_millis(1000)).await;
+
+core::write!(&mut msg, "AT+DR=EU868\r\n").unwrap();
+usart2.blocking_write(msg.as_bytes()).unwrap();
+msg.clear();
+Timer::after(Duration::from_millis(1000)).await;
+
+core::write!(&mut msg, "AT+CH=NUM,0-2\r\n").unwrap();
+usart2.blocking_write(msg.as_bytes()).unwrap();
+msg.clear();
+Timer::after(Duration::from_millis(1000)).await;
+
+core::write!(&mut msg, "AT+CLASS=A\r\n").unwrap();
+usart2.blocking_write(msg.as_bytes()).unwrap();
+msg.clear();
+Timer::after(Duration::from_millis(1000)).await;
+
+core::write!(&mut msg, "AT+PORT=8\r\n").unwrap();
+usart2.blocking_write(msg.as_bytes()).unwrap();
+msg.clear();
+Timer::after(Duration::from_millis(1000)).await;
+
+core::write!(&mut msg, "AT+ID=DevEui,\"70B3D57ED005B040\"\r\n").unwrap();
+usart2.blocking_write(msg.as_bytes()).unwrap();
+msg.clear();
+Timer::after(Duration::from_millis(1000)).await;
+
+core::write!(&mut msg, "AT+ID=AppEui,\"3E46E423455675E4\"\r\n").unwrap();
+usart2.blocking_write(msg.as_bytes()).unwrap();
+msg.clear();
+Timer::after(Duration::from_millis(1000)).await;
+
+core::write!(&mut msg, "AT+KEY=APPKEY,\"BDF4CF3CFE40578737D0D4323E6D3982\"\r\n").unwrap();
+usart2.blocking_write(msg.as_bytes()).unwrap();
+msg.clear();
+Timer::after(Duration::from_millis(1000)).await;
+
+core::write!(&mut msg, "AT+JOIN\r\n").unwrap();
+usart2.blocking_write(msg.as_bytes()).unwrap();
+msg.clear();
+Timer::after(Duration::from_millis(1000)).await;*/
+
 
     loop {
-
+     
+        
+      
         pwr_spply.set_high();
 
         led.set_high();
@@ -206,14 +268,16 @@ defmt::info!( "***--- Starting App ---***");
         let data:[u8;1] = [temp_celsius as u8];
 
 
-       // device.send(&data, 1, false);
+
+        //device.send(&data, 1, false);
         sending(&mut device, &data).await;
 
         defmt::info!("Temp on board = {}°C",temp_celsius);
         
-        pwr_spply.set_low();
+        pwr_spply.set_low(); 
+
         Timer::after(Duration::from_millis(10000)).await;
-        
+       
 
     }
 }
@@ -221,7 +285,7 @@ defmt::info!( "***--- Starting App ---***");
 
 async fn sending( device: &mut lorawan_device::async_device::Device<SubGhzRadio<'_, RadioSwitch<'_>>, Crypto, LoraTimer, Rng<'_, RNG>>, data: &[u8]){
  
-while let Err(error) = device.send(&data, 1, true).await{
+while let Err(error) = device.send(&data, 1, false).await{
     match error {
         lorawan_device::async_device::Error::Radio(_) => defmt::error!("Sending failed: Radio"),
         lorawan_device::async_device::Error::NetworkNotJoined => {defmt::error!("Sending failed: NetworkNotJoined")}
@@ -234,7 +298,7 @@ while let Err(error) = device.send(&data, 1, true).await{
          }
         
     }
-    Timer::after(Duration::from_millis(200000)).await;
+
 }
  
 
