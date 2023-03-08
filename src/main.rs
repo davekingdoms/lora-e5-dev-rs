@@ -168,13 +168,13 @@ let irqusart2 = interrupt::take!(USART2);
         }
         Timer::after(Duration::from_millis(5000)).await;
     }
-  */
-   // 3EE746227AC7987F
-   // 70B3D57ED055AAA5
-   // 88CA9BF1D73D7EA93969C7F6ED1A686F
-   let mut deveui = [0x3E, 0xE7, 0x46, 0x22, 0x7A, 0xC7, 0x98, 0x7F];
-   let mut appeui =  [0x70, 0xB3, 0xD5, 0x7E, 0xD0, 0x55, 0xAA, 0xA5];
-   let appkey = [0x88, 0xCA, 0x9B, 0xF1, 0xD7, 0x3D, 0x7E, 0xA9, 0x39, 0x69, 0xC7, 0xF6, 0xED, 0x1A, 0x68, 0x6F];
+*/
+   // 70B3D57ED005B3B6
+   // 6EE78EF90E9DD333
+   // 0507EACE6B5C10CA4D6F616170644BF1
+   let mut deveui = [0x70, 0xB3, 0xD5, 0x7E, 0xD0, 0x05, 0xB3, 0xB6];
+   let mut appeui =  [0x6E, 0xE7, 0x8E, 0xF9, 0x0E, 0x9D, 0xD3, 0x33];
+   let appkey = [0x05, 0x07, 0xEA, 0xCE, 0x6B, 0x5C, 0x10, 0xCA, 0x4D, 0x6F, 0x61, 0x61, 0x70, 0x64, 0x4B, 0xF1];
    deveui.reverse();
    appeui.reverse();
 
@@ -190,8 +190,8 @@ let irqusart2 = interrupt::take!(USART2);
             lorawan_device::async_device::Error::InvalidMic => {defmt::error!("Join failed: InvalidMic")}
             lorawan_device::async_device::Error::UnableToDecodePayload(_) => {defmt::error!("Join failed: UnableToDecodePayload")}
      }
-    Timer::after(Duration::from_millis(5000)).await;
-} 
+    Timer::after(Duration::from_millis(300000)).await;
+}   
 
 defmt::info!("Lorawan joined<");
 
@@ -265,18 +265,23 @@ Timer::after(Duration::from_millis(1000)).await;*/
         
 
         let temp_celsius = lm75a.read_temperature().unwrap();
-        let data:[u8;1] = [temp_celsius as u8];
+       let data:[u8;1] = [temp_celsius as u8];
 
 
+       /* 
+        core::write!(&mut msg, "AT+MSGHEX=\"{}\"\r\n",temp_celsius).unwrap();
+        usart2.blocking_write(msg.as_bytes()).unwrap();
+        msg.clear();
+        defmt::info!("Data sent");*/
 
         //device.send(&data, 1, false);
         sending(&mut device, &data).await;
-
+        
         defmt::info!("Temp on board = {}°C",temp_celsius);
         
         pwr_spply.set_low(); 
 
-        Timer::after(Duration::from_millis(10000)).await;
+        Timer::after(Duration::from_millis(300000)).await;
        
 
     }
