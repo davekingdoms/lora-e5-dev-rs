@@ -168,7 +168,7 @@ let irqusart2 = interrupt::take!(USART2);
         }
         Timer::after(Duration::from_millis(5000)).await;
     }
-
+*/
    // 70B3D57ED005B3B6
    // 6EE78EF90E9DD333
    // 0507EACE6B5C10CA4D6F616170644BF1
@@ -191,7 +191,7 @@ let irqusart2 = interrupt::take!(USART2);
             lorawan_device::async_device::Error::UnableToDecodePayload(_) => {defmt::error!("Join failed: UnableToDecodePayload")}
      }
     Timer::after(Duration::from_millis(300000)).await;
-}   */
+}   
 
 defmt::info!("Lorawan joined<");
 
@@ -275,7 +275,7 @@ Timer::after(Duration::from_millis(1000)).await;
         defmt::info!("Data sent");
 
         //device.send(&data, 1, false);
-        //sending(&mut device, &data).await;
+        sending(&mut device, &data).await;
         
         defmt::info!("Temp on board = {}°C",temp_celsius);
         
