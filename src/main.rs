@@ -190,13 +190,13 @@ let irqusart2 = interrupt::take!(USART2);
             lorawan_device::async_device::Error::InvalidMic => {defmt::error!("Join failed: InvalidMic")}
             lorawan_device::async_device::Error::UnableToDecodePayload(_) => {defmt::error!("Join failed: UnableToDecodePayload")}
      }
-    Timer::after(Duration::from_millis(300000)).await;
+    Timer::after(Duration::from_millis(3000)).await;
 }   
 
 defmt::info!("Lorawan joined<");
 
 defmt::info!( "***--- Starting App ---***");
-
+/*
 core::write!(&mut msg, "AT\r\n").unwrap();
 usart2.blocking_write(msg.as_bytes()).unwrap();
 msg.clear();
@@ -246,9 +246,9 @@ core::write!(&mut msg, "AT+JOIN\r\n").unwrap();
 usart2.blocking_write(msg.as_bytes()).unwrap();
 msg.clear();
 Timer::after(Duration::from_millis(1000)).await;
+ */
 
-
-    loop {
+  //  loop {
      
         
       
@@ -269,28 +269,29 @@ Timer::after(Duration::from_millis(1000)).await;
 
 
        
-        core::write!(&mut msg, "AT+MSGHEX=\"{}\"\r\n",temp_celsius).unwrap();
-        usart2.blocking_write(msg.as_bytes()).unwrap();
-        msg.clear();
-        defmt::info!("Data sent");
+        //core::write!(&mut msg, "AT+MSGHEX=\"{}\"\r\n",temp_celsius).unwrap();
+        //usart2.blocking_write(msg.as_bytes()).unwrap();
+        //msg.clear();
+       
 
         //device.send(&data, 1, false);
         sending(&mut device, &data).await;
+
         
         defmt::info!("Temp on board = {}°C",temp_celsius);
-        
+        defmt::info!("Data sent");
         pwr_spply.set_low(); 
 
         Timer::after(Duration::from_millis(3000)).await;
        
 
-    }
+    
 }
 
 
 async fn sending( device: &mut lorawan_device::async_device::Device<SubGhzRadio<'_, RadioSwitch<'_>>, Crypto, LoraTimer, Rng<'_, RNG>>, data: &[u8]){
  
-while let Err(error) = device.send(&data, 1, false).await{
+while let Err(error) = device.send(&data, 1, true).await{
     match error {
         lorawan_device::async_device::Error::Radio(_) => defmt::error!("Sending failed: Radio"),
         lorawan_device::async_device::Error::NetworkNotJoined => {defmt::error!("Sending failed: NetworkNotJoined")}
