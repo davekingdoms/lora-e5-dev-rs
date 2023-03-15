@@ -17,7 +17,7 @@ use embassy_embedded_hal::shared_bus::blocking::i2c::I2cDevice;
 use embassy_executor::{Spawner, _export::StaticCell};
 use embassy_lora::stm32wl::{SubGhzRadio, SubGhzRadioConfig};
 use embassy_stm32::{
-    dma::NoDma,
+    dma::{NoDma},
     gpio::{AnyPin, Level, Output, Pin, Speed},
     i2c::I2c,
     interrupt::{self},
@@ -93,14 +93,15 @@ async fn main(_spawner: Spawner) {
 
     //let mut _usart = UartTx::new(p.USART1, p.PB6, NoDma, Config::default());
     let mut uartconfig = Config::default();
-    uartconfig.baudrate = 9600;
+    uartconfig.baudrate = 115200;
     let irquart = interrupt::take!(USART1);
-    let mut uart = Uart::new(p.USART1, p.PB7,  p.PB6, irquart, NoDma, NoDma, uartconfig);
+    let mut uart = Uart::new(p.USART1, p.PB7,  p.PB6, irquart,NoDma , p.DMA1_CH1, uartconfig);
 let irqusart2 = interrupt::take!(USART2);
     let mut usart2 = Uart::new(p.USART2, p.PA3, p.PA2, irqusart2, NoDma, NoDma, uartconfig);
     let mut msg: String<64> = String::new();
 
-    let mut pwr_spply = Output::new(p.PA9, Level::Low, Speed::Low);
+    let mut pwr_3v3 = Output::new(p.PA9, Level::High, Speed::Low);
+    let mut pwr_5v = Output::new(p.PB10, Level::High, Speed::Medium);
 
     static I2C_BUS: StaticCell<NoopMutex<RefCell<I2c<I2C2>>>> = StaticCell::new();
     let irq = interrupt::take!(I2C2_EV);
@@ -168,7 +169,7 @@ let irqusart2 = interrupt::take!(USART2);
         }
         Timer::after(Duration::from_millis(5000)).await;
     }
-*/
+
    // 70B3D57ED005B3B6
    // 6EE78EF90E9DD333
    // 0507EACE6B5C10CA4D6F616170644BF1
@@ -191,68 +192,77 @@ let irqusart2 = interrupt::take!(USART2);
             lorawan_device::async_device::Error::UnableToDecodePayload(_) => {defmt::error!("Join failed: UnableToDecodePayload")}
      }
     Timer::after(Duration::from_millis(3000)).await;
-}   
+}  
+defmt::info!("Lorawan joined<"); */
 
-defmt::info!("Lorawan joined<");
+
 
 defmt::info!( "***--- Starting App ---***");
-/*
+core::write!(&mut msg, "AT+UART=BR,115200\r\n").unwrap();
+usart2.blocking_write(msg.as_bytes()).unwrap();
+msg.clear();
+Timer::after(Duration::from_millis(2000)).await;
+
 core::write!(&mut msg, "AT\r\n").unwrap();
 usart2.blocking_write(msg.as_bytes()).unwrap();
 msg.clear();
-Timer::after(Duration::from_millis(1000)).await;
+Timer::after(Duration::from_millis(2000)).await;
 
 core::write!(&mut msg, "AT+MODE=LWOTAA\r\n").unwrap();
 usart2.blocking_write(msg.as_bytes()).unwrap();
 msg.clear();
-Timer::after(Duration::from_millis(1000)).await;
+Timer::after(Duration::from_millis(2000)).await;
 
 core::write!(&mut msg, "AT+DR=EU868\r\n").unwrap();
 usart2.blocking_write(msg.as_bytes()).unwrap();
 msg.clear();
-Timer::after(Duration::from_millis(1000)).await;
+Timer::after(Duration::from_millis(2000)).await;
 
 core::write!(&mut msg, "AT+CH=NUM,0-2\r\n").unwrap();
 usart2.blocking_write(msg.as_bytes()).unwrap();
 msg.clear();
-Timer::after(Duration::from_millis(1000)).await;
+Timer::after(Duration::from_millis(2000)).await;
 
 core::write!(&mut msg, "AT+CLASS=A\r\n").unwrap();
 usart2.blocking_write(msg.as_bytes()).unwrap();
 msg.clear();
-Timer::after(Duration::from_millis(1000)).await;
+Timer::after(Duration::from_millis(2000)).await;
 
 core::write!(&mut msg, "AT+PORT=8\r\n").unwrap();
 usart2.blocking_write(msg.as_bytes()).unwrap();
 msg.clear();
-Timer::after(Duration::from_millis(1000)).await;
+Timer::after(Duration::from_millis(2000)).await;
 
 core::write!(&mut msg, "AT+ID=DevEui,\"70B3D57ED005B040\"\r\n").unwrap();
 usart2.blocking_write(msg.as_bytes()).unwrap();
 msg.clear();
-Timer::after(Duration::from_millis(1000)).await;
+Timer::after(Duration::from_millis(2000)).await;
 
 core::write!(&mut msg, "AT+ID=AppEui,\"3E46E423455675E4\"\r\n").unwrap();
 usart2.blocking_write(msg.as_bytes()).unwrap();
 msg.clear();
-Timer::after(Duration::from_millis(1000)).await;
+Timer::after(Duration::from_millis(2000)).await;
 
 core::write!(&mut msg, "AT+KEY=APPKEY,\"BDF4CF3CFE40578737D0D4323E6D3982\"\r\n").unwrap();
 usart2.blocking_write(msg.as_bytes()).unwrap();
 msg.clear();
-Timer::after(Duration::from_millis(1000)).await;
+Timer::after(Duration::from_millis(2000)).await;
 
 core::write!(&mut msg, "AT+JOIN\r\n").unwrap();
 usart2.blocking_write(msg.as_bytes()).unwrap();
 msg.clear();
-Timer::after(Duration::from_millis(1000)).await;
- */
+Timer::after(Duration::from_millis(10000)).await;
 
-  //  loop {
+
+defmt::info!("Lorawan joined<");
+
+let mut buffer=[0u8; 5];
+
+    loop {
      
         
       
-        pwr_spply.set_high();
+        pwr_3v3.set_high();
 
         led.set_high();
         defmt::info!("Led On");
@@ -265,26 +275,29 @@ Timer::after(Duration::from_millis(1000)).await;
         
 
         let temp_celsius = lm75a.read_temperature().unwrap();
-       let data:[u8;1] = [temp_celsius as u8];
+        //let data:[u8;1] = [temp_celsius as u8];
 
 
        
-        //core::write!(&mut msg, "AT+MSGHEX=\"{}\"\r\n",temp_celsius).unwrap();
-        //usart2.blocking_write(msg.as_bytes()).unwrap();
-        //msg.clear();
+        core::write!(&mut msg, "AT+MSGHEX=\"{}\"\r\n",temp_celsius).unwrap();
+        
+        usart2.blocking_write(msg.as_bytes()).unwrap();
+        uart.blocking_read(&mut buffer).unwrap();
+        msg.clear();
        
 
         //device.send(&data, 1, false);
-        sending(&mut device, &data).await;
+        //sending(&mut device, &data).await;
 
         
         defmt::info!("Temp on board = {}°C",temp_celsius);
         defmt::info!("Data sent");
-        pwr_spply.set_low(); 
+        
 
-        Timer::after(Duration::from_millis(3000)).await;
-       
-
+        Timer::after(Duration::from_millis(5000)).await;
+       uart.blocking_write(&buffer).unwrap();
+    
+    }
     
 }
 
