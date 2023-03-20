@@ -8,6 +8,7 @@
 
 
 
+use defmt::info;
 use defmt_rtt as _;
 use heapless::String;
 
@@ -95,9 +96,9 @@ async fn main(_spawner: Spawner) {
     let mut uartconfig = Config::default();
     uartconfig.baudrate = 115200;
     let irquart = interrupt::take!(USART1);
-    let mut uart = Uart::new(p.USART1, p.PB7,  p.PB6, irquart,NoDma , p.DMA1_CH1, uartconfig);
+    let mut uart = Uart::new(p.USART1, p.PB7,  p.PB6, irquart,p.DMA1_CH1 , p.DMA1_CH2, uartconfig);
 let irqusart2 = interrupt::take!(USART2);
-    let mut usart2 = Uart::new(p.USART2, p.PA3, p.PA2, irqusart2, NoDma, NoDma, uartconfig);
+    let mut usart2 = Uart::new(p.USART2, p.PA3, p.PA2, irqusart2, p.DMA1_CH3, p.DMA1_CH4, uartconfig);
     let mut msg: String<64> = String::new();
 
     let mut pwr_3v3 = Output::new(p.PA9, Level::High, Speed::Low);
@@ -195,73 +196,111 @@ let irqusart2 = interrupt::take!(USART2);
 }  
 defmt::info!("Lorawan joined<"); */
 
-
+let mut buf: [u8; 64] = [0; 64];
 
 defmt::info!( "***--- Starting App ---***");
-core::write!(&mut msg, "AT+UART=BR,115200\r\n").unwrap();
-usart2.blocking_write(msg.as_bytes()).unwrap();
-msg.clear();
+uart.write(b"***--- Starting App ---***\r\n").await.unwrap();
+
+usart2.write(b"AT+UART=BR,115200\r\n").await.unwrap();
+info!("AT+UART=BR,115200");
 Timer::after(Duration::from_millis(2000)).await;
 
-core::write!(&mut msg, "AT\r\n").unwrap();
-usart2.blocking_write(msg.as_bytes()).unwrap();
-msg.clear();
+usart2.write(b"AT+RESET\r\n").await.unwrap();
+info!("AT+RESET");
+usart2.read_until_idle(&mut buf).await.unwrap();
+uart.write(&buf).await.unwrap();
+Timer::after(Duration::from_millis(8000)).await;
+let mut buf: [u8; 64] = [0; 64];
+
+usart2.write(b"AT+UART=BR,115200\r\n").await.unwrap();
+info!("AT+UART=BR,115200");
 Timer::after(Duration::from_millis(2000)).await;
 
-core::write!(&mut msg, "AT+MODE=LWOTAA\r\n").unwrap();
-usart2.blocking_write(msg.as_bytes()).unwrap();
-msg.clear();
+usart2.write(b"AT\r\n").await.unwrap();
+info!("AT");
+usart2.read_until_idle(&mut buf).await.unwrap();
+uart.write(&buf).await.unwrap();
 Timer::after(Duration::from_millis(2000)).await;
+let mut buf: [u8; 64] = [0; 64];
 
-core::write!(&mut msg, "AT+DR=EU868\r\n").unwrap();
-usart2.blocking_write(msg.as_bytes()).unwrap();
-msg.clear();
+usart2.write(b"AT+MODE=LWOTAA\r\n").await.unwrap();
+info!("AT+MODE=LWOTAA");
+usart2.read_until_idle(&mut buf).await.unwrap();
+uart.write(&buf).await.unwrap();
 Timer::after(Duration::from_millis(2000)).await;
+let mut buf: [u8; 64] = [0; 64];
 
-core::write!(&mut msg, "AT+CH=NUM,0-2\r\n").unwrap();
-usart2.blocking_write(msg.as_bytes()).unwrap();
-msg.clear();
+usart2.write(b"AT+DR=EU868\r\n").await.unwrap();
+info!("AT+DR=EU868");
+usart2.read_until_idle(&mut buf).await.unwrap();
+uart.write(&buf).await.unwrap();
 Timer::after(Duration::from_millis(2000)).await;
+let mut buf: [u8; 64] = [0; 64];
 
-core::write!(&mut msg, "AT+CLASS=A\r\n").unwrap();
-usart2.blocking_write(msg.as_bytes()).unwrap();
-msg.clear();
+usart2.write(b"AT+DR=0\r\n").await.unwrap();
+info!("AT+DR=0");
+usart2.read_until_idle(&mut buf).await.unwrap();
+uart.write(&buf).await.unwrap();
 Timer::after(Duration::from_millis(2000)).await;
+let mut buf: [u8; 64] = [0; 64];
 
-core::write!(&mut msg, "AT+PORT=8\r\n").unwrap();
-usart2.blocking_write(msg.as_bytes()).unwrap();
-msg.clear();
+usart2.write(b"AT+CH=NUM,0-2\r\n").await.unwrap();
+info!("AT+CH=NUM,0-2");
+usart2.read_until_idle(&mut buf).await.unwrap();
+uart.write(&buf).await.unwrap();
 Timer::after(Duration::from_millis(2000)).await;
+let mut buf: [u8; 64] = [0; 64];
 
-core::write!(&mut msg, "AT+ID=DevEui,\"70B3D57ED005B040\"\r\n").unwrap();
-usart2.blocking_write(msg.as_bytes()).unwrap();
-msg.clear();
+usart2.write(b"AT+CLASS=A\r\n").await.unwrap();
+info!("AT+CLASS=A");
+usart2.read_until_idle(&mut buf).await.unwrap();
+uart.write(&buf).await.unwrap();
 Timer::after(Duration::from_millis(2000)).await;
+let mut buf: [u8; 64] = [0; 64];
 
-core::write!(&mut msg, "AT+ID=AppEui,\"3E46E423455675E4\"\r\n").unwrap();
-usart2.blocking_write(msg.as_bytes()).unwrap();
-msg.clear();
+usart2.write(b"AT+PORT=8\r\n").await.unwrap();
+info!("AT+PORT=8");
+usart2.read_until_idle(&mut buf).await.unwrap();
+uart.write(&buf).await.unwrap();
 Timer::after(Duration::from_millis(2000)).await;
+let mut buf: [u8; 64] = [0; 64];
 
-core::write!(&mut msg, "AT+KEY=APPKEY,\"BDF4CF3CFE40578737D0D4323E6D3982\"\r\n").unwrap();
-usart2.blocking_write(msg.as_bytes()).unwrap();
-msg.clear();
+usart2.write(b"AT+ID=DevEui,\"70B3D57ED005B046\"\r\n").await.unwrap();
+info!("AT+ID=DevEui,70B3D57ED005B046");
+usart2.read_until_idle(&mut buf).await.unwrap();
+uart.write(&buf).await.unwrap();
 Timer::after(Duration::from_millis(2000)).await;
+let mut buf: [u8; 64] = [0; 64];
 
-core::write!(&mut msg, "AT+JOIN\r\n").unwrap();
-usart2.blocking_write(msg.as_bytes()).unwrap();
-msg.clear();
-Timer::after(Duration::from_millis(10000)).await;
+usart2.write(b"AT+ID=AppEui,\"3E46E423455675E6\"\r\n").await.unwrap();
+info!("AT+ID=AppEui,\"3E46E423455675E6\"");
+usart2.read_until_idle(&mut buf).await.unwrap();
+uart.write(&buf).await.unwrap();
+Timer::after(Duration::from_millis(2000)).await;
+let mut buf: [u8; 64] = [0; 64];
+
+usart2.write(b"AT+KEY=APPKEY,\"BDF4CF3CFE40578737D0D4323E6D3980\"\r\n").await.unwrap();
+info!("AT+KEY=APPKEY,\"BDF4CF3CFE40578737D0D4323E6D3980\"");
+usart2.read_until_idle(&mut buf).await.unwrap();
+uart.write(&buf).await.unwrap();
+Timer::after(Duration::from_millis(2000)).await;
+let mut buf: [u8; 64] = [0; 64];
+
+
+usart2.write(b"AT+JOIN\r\n").await.unwrap();
+info!("AT+JOIN");
+usart2.read_until_idle(&mut buf).await.unwrap();
+uart.write(&buf).await.unwrap();
+Timer::after(Duration::from_millis(15000)).await;
+
 
 
 defmt::info!("Lorawan joined<");
 
-let mut buffer=[0u8; 5];
 
     loop {
-     
-        
-      
+        let mut buf: [u8; 64] = [0; 64];
+
         pwr_3v3.set_high();
 
         led.set_high();
@@ -280,9 +319,11 @@ let mut buffer=[0u8; 5];
 
        
         core::write!(&mut msg, "AT+MSGHEX=\"{}\"\r\n",temp_celsius).unwrap();
-        
-        usart2.blocking_write(msg.as_bytes()).unwrap();
-        uart.blocking_read(&mut buffer).unwrap();
+        uart.write(&msg.as_bytes()).await.unwrap();
+        uart.write(msg.as_bytes()).await.unwrap();
+        usart2.write(msg.as_bytes()).await.unwrap();
+        usart2.read_until_idle(&mut buf).await.unwrap();
+        uart.write(&buf).await.unwrap();
         msg.clear();
        
 
@@ -295,7 +336,7 @@ let mut buffer=[0u8; 5];
         
 
         Timer::after(Duration::from_millis(5000)).await;
-       uart.blocking_write(&buffer).unwrap();
+
     
     }
     
