@@ -17,7 +17,7 @@
             "runToEntryPoint": "main",
             "searchDir": ["./openocd"],
             "servertype": "openocd",
-            "svdFile": "./STM32WLE5_CM4.svd",
+            "svdFile": "./STM32WL5x_CM4.svd",
             "type": "cortex-debug",
         }
     ],
