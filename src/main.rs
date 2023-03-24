@@ -106,9 +106,9 @@ async fn main(_spawner: Spawner) {
      }  
     defmt::info!("LoRaWAN network joined");*/
     defmt::info!("Joining LoRaWAN network");
-    let mut deveui = [0x70, 0xB3, 0xD5, 0x7E, 0xD0, 0x05, 0xB3, 0xB6];
-   let mut appeui =  [0x6E, 0xE7, 0x8E, 0xF9, 0x0E, 0x9D, 0xD3, 0x33];
-   let appkey = [0x05, 0x07, 0xEA, 0xCE, 0x6B, 0x5C, 0x10, 0xCA, 0x4D, 0x6F, 0x61, 0x61, 0x70, 0x64, 0x4B, 0xF1];
+    let mut deveui = [0x70, 0xB3, 0xD5, 0x7E, 0xD0, 0x05, 0xB3, 0x44];
+   let mut appeui =  [0x6E, 0xE7, 0x8E, 0xF9, 0x0E, 0x9D, 0xD3, 0x44];
+   let appkey = [0x05, 0x07, 0xEA, 0xCE, 0x6B, 0x5C, 0x10, 0xCA, 0x4D, 0x6F, 0x61, 0x61, 0x70, 0x64, 0x4B, 0x44];
    deveui.reverse();
    appeui.reverse();
    while let Err(err) = device.join(&JoinMode::OTAA {deveui, appeui, appkey,}).await{
@@ -130,23 +130,48 @@ let mut temp_celsius:u8 = 24;
 loop {
    
 let data:[u8;1] = [temp_celsius ];
-while let Err(error) = device.send(&data, 1, false).await{
+//let mut rx: [u8; 255] = [0; 255];
+/*while let Err(error) =device.send_recv(&data,  &mut rx[..], 2, false).await{
     match error {
         lorawan_device::async_device::Error::Radio(_) => defmt::error!("Sending failed: Radio"),
         lorawan_device::async_device::Error::NetworkNotJoined => {defmt::error!("Sending failed: NetworkNotJoined")}
         lorawan_device::async_device::Error::UnableToPreparePayload(_) => {defmt::error!("Sending failed: UnableToPreparePayload")}
         lorawan_device::async_device::Error::InvalidDevAddr => {defmt::error!("Sending failed: InvalidDevAddr")}
-        lorawan_device::async_device::Error::RxTimeout => {defmt::error!("Sending failed: RxTimeout"); break}
+        lorawan_device::async_device::Error::RxTimeout => {defmt::error!("Sending failed: RxTimeout");}
         lorawan_device::async_device::Error::SessionExpired => {defmt::error!("Sending failed: SessionExpired")}
         lorawan_device::async_device::Error::InvalidMic => {defmt::error!("Sending failed: InvalidMic")}
         lorawan_device::async_device::Error::UnableToDecodePayload(_) => {defmt::error!("Sending failed: UnableToDecodePayload")}
          }
         Timer::after(Duration::from_millis(3000)).await;
     }
-    Timer::after(Duration::from_millis(3000)).await;
-    temp_celsius +=1;
+
+    Timer::after(Duration::from_millis(20000)).await;
     defmt::info!("Data sent>");
     defmt::info!("{}",temp_celsius);
+    defmt::info!("rx: {}",rx);
+    temp_celsius +=1;
+   */
+  defmt::info!("Sending>");
+  while let Err(error) =device.send(&data, 2, false).await{
+    match error {
+        lorawan_device::async_device::Error::Radio(_) => defmt::error!("Sending failed: Radio"),
+        lorawan_device::async_device::Error::NetworkNotJoined => {defmt::error!("Sending failed: NetworkNotJoined")}
+        lorawan_device::async_device::Error::UnableToPreparePayload(_) => {defmt::error!("Sending failed: UnableToPreparePayload")}
+        lorawan_device::async_device::Error::InvalidDevAddr => {defmt::error!("Sending failed: InvalidDevAddr")}
+        lorawan_device::async_device::Error::RxTimeout => {defmt::error!("Sending failed: RxTimeout");break;}
+        lorawan_device::async_device::Error::SessionExpired => {defmt::error!("Sending failed: SessionExpired")}
+        lorawan_device::async_device::Error::InvalidMic => {defmt::error!("Sending failed: InvalidMic")}
+        lorawan_device::async_device::Error::UnableToDecodePayload(_) => {defmt::error!("Sending failed: UnableToDecodePayload")}
+         }
+        Timer::after(Duration::from_millis(3000)).await;
+    }
+
+    Timer::after(Duration::from_millis(5000)).await;
+    defmt::info!("Data sent>");
+    defmt::info!("{}",temp_celsius);
+ 
+    temp_celsius +=1;
+
+    }
 }
 
-}
