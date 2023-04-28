@@ -30,6 +30,8 @@ use lorawan_device::async_device::{region, Device, JoinMode};
 use {defmt_rtt as _, panic_probe as _};
 
 const LORAWAN_REGION: region::Region = region::Region::EU868; // warning: set this appropriately for the region
+static DEVICE: Mutex<RefCell<Device<LoRaRadio<SX1261_2<>>>>>
+
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
