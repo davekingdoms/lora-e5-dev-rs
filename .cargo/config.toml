@@ -2,7 +2,7 @@
 # runner = "arm-none-eabi-gdb -q -x openocd.gdb"
 # runner = "gdb-multiarch -q -x openocd.gdb"
 # runner = "gdb -q -x openocd.gdb"
-runner = "probe-run --chip STM32WL55JCIx"
+runner = "probe-run --chip STM32WLE5JCIx"
 
 rustflags = [
   # This is needed if your flash or ram addresses are not aligned to 0x10000 in memory.x
@@ -38,7 +38,7 @@ target = "thumbv7em-none-eabi"       # Cortex-M4 and Cortex-M7 (no FPU)
 # target = "thumbv8m.main-none-eabi"   # Cortex-M33 (no FPU)
 # target = "thumbv8m.main-none-eabihf" # Cortex-M33 (with FPU)
 [alias]
-upload = "flash --chip STM32WL55JCIx"
+upload = "flash --chip STM32WLE5JCIx"
 
 [env]
 DEFMT_LOG="debug"
