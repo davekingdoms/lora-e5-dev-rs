@@ -19,7 +19,7 @@ embassy-time = { version = "0.1.0", git = "https://github.com/davekingdoms/embas
 embassy-stm32 = { version = "0.1.0", git = "https://github.com/davekingdoms/embassy.git", features = ["nightly", "unstable-traits", "defmt", "stm32wl55jc-cm4", "time-driver-any", "memory-x", "unstable-pac", "exti"]  }
 embassy-embedded-hal = {version = "0.1.0", git = "https://github.com/davekingdoms/embassy.git" }
 embassy-lora = { version = "0.1.0", git = "https://github.com/davekingdoms/embassy.git", features = ["stm32wl", "time", "defmt"] }
-lora-phy = { version = "1" }
+lora-phy = { version = "1.1.0" }
 lorawan-device = { version = "0.10.0",git = "https://github.com/davekingdoms/rust-lorawan.git", default-features = false, features = ["async", "external-lora-phy"] }
 lorawan = { version = "0.7.3", git = "https://github.com/davekingdoms/rust-lorawan.git",default-features = false, features = ["default-crypto"] }
 
@@ -33,6 +33,7 @@ embedded-storage = "0.3.0"
 panic-probe = { version = "0.3", features = ["print-defmt"] }
 futures = { version = "0.3.17", default-features = false, features = ["async-await"] }
 heapless = { version = "0.7.5", default-features = false }
+nmea = {version = "0.4", default-features = false}
 
 # cargo build/run
 [profile.dev]
