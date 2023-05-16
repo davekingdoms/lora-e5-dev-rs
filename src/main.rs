@@ -8,6 +8,7 @@
 #![feature(generic_arg_infer)]
 
 
+use core::str::from_utf8;
 use core::sync::atomic::{ Ordering, AtomicU8};
 
 
@@ -17,13 +18,14 @@ use embassy_lora::iv::Stm32wlInterfaceVariant;
 use embassy_lora::LoraTimer;
 use embassy_stm32::exti::ExtiInput;
 use embassy_stm32::gpio::{Level, Output, Pin, Speed, Input, Pull, AnyPin};
-use embassy_stm32::peripherals::{ PA0, PA1, SUBGHZSPI, DMA1_CH1, DMA1_CH2, RNG, PC6};
+use embassy_stm32::peripherals::{ PA0, PA1, SUBGHZSPI, DMA1_CH1, DMA1_CH2, RNG, PC6, USART2, DMA1_CH4, DMA1_CH3};
 use embassy_stm32::rng::Rng;
 use embassy_stm32::spi::Spi;
+use embassy_stm32::usart::{Config, Uart};
 use embassy_stm32::{interrupt, into_ref, pac, Peripheral};
 use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
 use embassy_sync::channel::Channel;
-
+use nmea::Nmea;
 use embassy_time::{Delay, Timer, Duration, with_timeout};
 use lora_phy::mod_params::*;
 use lora_phy::sx1261_2::SX1261_2;
@@ -148,6 +150,11 @@ async fn main(spawner: Spawner) {
     let _ctrl3 = Output::new(p.PC3.degrade(), Level::High, Speed::High);
     let iv = Stm32wlInterfaceVariant::new(irq, None, Some(ctrl2)).unwrap();
 
+    let uartconfig = Config::default();
+    let irq = interrupt::take!(USART2);
+    let  usart2 = Uart::new(p.USART2, p.PA3, p.PA2, irq, p.DMA1_CH3, p.DMA1_CH4, uartconfig);
+
+
     let button = ExtiInput::new(Input::new(p.PA0, Pull::Up), p.EXTI0);
     let button2 = ExtiInput::new(Input::new(p.PA1, Pull::Up), p.EXTI1);
     let button3 = ExtiInput::new(Input::new(p.PC6, Pull::Up), p.EXTI6);
@@ -157,6 +164,7 @@ async fn main(spawner: Spawner) {
         Output::new(p.PB11.degrade(), Level::Low, Speed::Low),
     ];
     let leds = Leds::new(leds);
+   
     spawner.spawn(led_manager(leds)).unwrap();
     CHANNEL.send(AppState::Init).await;
 
@@ -226,7 +234,7 @@ CHANNEL.send(AppState::Idle).await;
 defmt::info!("Lorawan joined<");
 
 info!("Spawn");
-spawner.spawn(sending(button,  device)).unwrap();
+spawner.spawn(sending(button, usart2,  device)).unwrap();
 spawner.spawn(button2_waiter(button2)).unwrap();
 spawner.spawn(dr_up(button3)).unwrap();
 info!("Spawned");
@@ -235,48 +243,89 @@ info!("Spawned");
 }
 
 #[embassy_executor::task]
-async fn sending(mut button: ExtiInput<'static, PA0>, mut device:  Device<LoRaRadio<SX1261_2<Spi<'static, SUBGHZSPI, DMA1_CH1, DMA1_CH2>, Stm32wlInterfaceVariant<'static, Output<'static, AnyPin>>>>, Crypto, LoraTimer, Rng<'static, RNG>>) {
+async fn sending(mut button: ExtiInput<'static, PA0>, mut uart: Uart<'static, USART2, DMA1_CH3, DMA1_CH4>,
+ mut device:  Device<LoRaRadio<SX1261_2<Spi<'static, SUBGHZSPI, DMA1_CH1, DMA1_CH2>, Stm32wlInterfaceVariant<'static, Output<'static, AnyPin>>>>, Crypto, LoraTimer, Rng<'static, RNG>>) {
     Timer::after(Duration::from_millis(3000)).await;
     info!("Ready for send");
+    let mut nmea = Nmea::default();
+    let mut buf = [0u8; 66];
     loop {
- 
+
     button.wait_for_falling_edge().await;
     CHANNEL.send(AppState::Sanding).await;
-    info!(">Sending");
-    Timer::after(Duration::from_millis(1000)).await;
-    let dr = NR.load(Ordering::Relaxed);
-    match dr {
-        0 => device.set_datarate(region::DR::_0),
-        1 => device.set_datarate(region::DR::_1),
-        2 => device.set_datarate(region::DR::_2),
-        3 => device.set_datarate(region::DR::_3),
-        4 => device.set_datarate(region::DR::_4),
-        5 => device.set_datarate(region::DR::_5),
-        6 => device.set_datarate(region::DR::_6),
-        _ => device.set_datarate(region::DR::_0)
-    }
 
-    while let Err(error) = device.send(b"N,12158.3416 W,161229.487", 2, false).await{
-        match error {
-            lorawan_device::async_device::Error::Radio(_) => defmt::error!("Sending failed: Radio"),
-            lorawan_device::async_device::Error::NetworkNotJoined => {defmt::error!("Sending failed: NetworkNotJoined")}
-            lorawan_device::async_device::Error::UnableToPreparePayload(_) => {defmt::error!("Sending failed: UnableToPreparePayload")}
-            lorawan_device::async_device::Error::InvalidDevAddr => {defmt::error!("Sending failed: InvalidDevAddr")}
-            lorawan_device::async_device::Error::RxTimeout => {defmt::error!("Sending failed: RxTimeout");break}
-            lorawan_device::async_device::Error::SessionExpired => {defmt::error!("Sending failed: SessionExpired")}
-            lorawan_device::async_device::Error::InvalidMic => {defmt::error!("Sending failed: InvalidMic")}
-            lorawan_device::async_device::Error::UnableToDecodePayload(_) => {defmt::error!("Sending failed: UnableToDecodePayload")}
-             }
-            Timer::after(Duration::from_millis(3000)).await;
+    let result = uart.read_until_idle(&mut buf).await;
+    match result {
+        Ok(_) => {
+         
+                    info!("Reciving gps data");
+                    let gga = from_utf8(&buf).unwrap();
+                    //let gga = "$GPGGA,092750.000,5321.6802,N,00630.3372,W,1,8,1.03,61.7,M,55.2,M,,*76";
+                    //nmea.parse(gga).unwrap();
+                    nmea.parse(gga).unwrap();
+                    
+                    let latitude =nmea.latitude().unwrap();
+                    let blat = latitude.to_ne_bytes();
+                    info!("Blat {}",blat);
+                    info!("Lat {}", latitude);
+                    info!("Blat tiìo lat {}",f64::from_ne_bytes(blat));
+                    let _longitude = nmea.longitude().unwrap().to_ne_bytes();
+                   /*  let payload = tmp.as_bytes();
+            
+                    let payload: [u8; 16] = {
+                    let mut payload:[u8; 16] = [0; 16];
+                    let (one, two) = payload.split_at_mut(8);
+                    one.copy_from_slice(&latitude);
+                    two.copy_from_slice(&longitude);
+                    payload
+                   };*/
+
+                    //info!("Latitude: {}",f64::from_ne_bytes(latitude));
+                    //info!("Longitude: {}", f64::from_ne_bytes(longitude));
+                    info!("Lenght gga: {}",buf.len());
+                    //info!("Payload {}",payload);
+                    info!("buf from uart {}",buf);
+                    info!(">Sending");
+                    Timer::after(Duration::from_millis(1000)).await;
+                    let dr = NR.load(Ordering::Relaxed);
+                    match dr {
+                        0 => device.set_datarate(region::DR::_0),
+                        1 => device.set_datarate(region::DR::_1),
+                        2 => device.set_datarate(region::DR::_2),
+                        3 => device.set_datarate(region::DR::_3),
+                        4 => device.set_datarate(region::DR::_4),
+                        5 => device.set_datarate(region::DR::_5),
+                        6 => device.set_datarate(region::DR::_6),
+                        _ => device.set_datarate(region::DR::_0)
+                    }
+                    while let Err(error) = device.send(&blat, 2, false).await{
+                        match error {
+                            lorawan_device::async_device::Error::Radio(_) => defmt::error!("Sending failed: Radio"),
+                            lorawan_device::async_device::Error::NetworkNotJoined => {defmt::error!("Sending failed: NetworkNotJoined")}
+                            lorawan_device::async_device::Error::UnableToPreparePayload(_) => {defmt::error!("Sending failed: UnableToPreparePayload")}
+                            lorawan_device::async_device::Error::InvalidDevAddr => {defmt::error!("Sending failed: InvalidDevAddr")}
+                            lorawan_device::async_device::Error::RxTimeout => {defmt::error!("Sending failed: RxTimeout");break}
+                            lorawan_device::async_device::Error::SessionExpired => {defmt::error!("Sending failed: SessionExpired")}
+                            lorawan_device::async_device::Error::InvalidMic => {defmt::error!("Sending failed: InvalidMic")}
+                            lorawan_device::async_device::Error::UnableToDecodePayload(_) => {defmt::error!("Sending failed: UnableToDecodePayload")}
+                             }
+                            Timer::after(Duration::from_millis(3000)).await;
+                        }
+                        defmt::info!("Data sent>");
+                        let  fcount = device.get_session().as_ref().unwrap().fcnt_up();
+                        defmt::info!("Fcount: {}", fcount );
+                        //defmt::info!("N,12158.3416 W,161229.487");
+                        Timer::after(Duration::from_millis(20000)).await;
+                        CHANNEL.send(AppState::Idle).await;
+                        info!("...Ready for new send...")
+              
+            }
+        
+        Err(_err) => {
+            //Ignore eg. framing errors
+            }
         }
-       
-        defmt::info!("Data sent>");
-        let  fcount = device.get_session().as_ref().unwrap().fcnt_up();
-        defmt::info!("Fcount: {}", fcount );
-        defmt::info!("N,12158.3416 W,161229.487");
-        Timer::after(Duration::from_millis(20000)).await;
-        CHANNEL.send(AppState::Idle).await;
-        info!("...Ready for new send...")
+     
     }
 }
 
