@@ -12,17 +12,18 @@ use core::str::from_utf8;
 use core::sync::atomic::{ Ordering, AtomicU8};
 
 
+use arrayvec::ArrayVec;
 use defmt::*;
 use embassy_executor::Spawner;
-use embassy_lora::iv::Stm32wlInterfaceVariant;
+use embassy_lora::iv::{InterruptHandler,Stm32wlInterfaceVariant};
 use embassy_lora::LoraTimer;
 use embassy_stm32::exti::ExtiInput;
 use embassy_stm32::gpio::{Level, Output, Pin, Speed, Input, Pull, AnyPin};
 use embassy_stm32::peripherals::{ PA0, PA1, SUBGHZSPI, DMA1_CH1, DMA1_CH2, RNG, PC6, USART2, DMA1_CH4, DMA1_CH3};
 use embassy_stm32::rng::Rng;
 use embassy_stm32::spi::Spi;
-use embassy_stm32::usart::{Config, Uart};
-use embassy_stm32::{interrupt, into_ref, pac, Peripheral};
+use embassy_stm32::usart::{Config, InterruptHandler as interrupt,Uart};
+use embassy_stm32::{bind_interrupts, pac, peripherals};
 use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
 use embassy_sync::channel::Channel;
 use nmea::Nmea;
@@ -128,6 +129,14 @@ enum AppState {
     Error
 }
 
+bind_interrupts!(struct Irqs{
+    SUBGHZ_RADIO => InterruptHandler;  
+});
+
+bind_interrupts!(struct Irq{
+    USART2 => interrupt<peripherals::USART2>;
+    
+});
 const LORAWAN_REGION: region::Region = region::Region::EU868; // warning: set this appropriately for the region
 static NR:AtomicU8 = AtomicU8::new(0);
 static CHANNEL: Channel<ThreadModeRawMutex, AppState, 1> = Channel::new();
@@ -142,17 +151,16 @@ async fn main(spawner: Spawner) {
     unsafe { pac::RCC.ccipr().modify(|w| w.set_rngsel(0b01)) }
     let spi = Spi::new_subghz(p.SUBGHZSPI, p.DMA1_CH1, p.DMA1_CH2);
  
-    let irq = interrupt::take!(SUBGHZ_RADIO);
-    into_ref!(irq);
+ 
     // Set CTRL1 and CTRL3 for high-power transmission, while CTRL2 acts as an RF switch between tx and rx
     let _ctrl1 = Output::new(p.PC4.degrade(), Level::Low, Speed::High);
     let ctrl2 = Output::new(p.PC5.degrade(), Level::High, Speed::High);
     let _ctrl3 = Output::new(p.PC3.degrade(), Level::High, Speed::High);
-    let iv = Stm32wlInterfaceVariant::new(irq, None, Some(ctrl2)).unwrap();
+    let iv = Stm32wlInterfaceVariant::new(Irqs, None, Some(ctrl2)).unwrap();
 
     let uartconfig = Config::default();
-    let irq = interrupt::take!(USART2);
-    let  usart2 = Uart::new(p.USART2, p.PA3, p.PA2, irq, p.DMA1_CH3, p.DMA1_CH4, uartconfig);
+
+    let  usart2 = Uart::new(p.USART2, p.PA3, p.PA2, Irq, p.DMA1_CH3, p.DMA1_CH4, uartconfig);
 
 
     let button = ExtiInput::new(Input::new(p.PA0, Pull::Up), p.EXTI0);
@@ -244,7 +252,7 @@ info!("Spawned");
 
 #[embassy_executor::task]
 async fn sending(mut button: ExtiInput<'static, PA0>, mut uart: Uart<'static, USART2, DMA1_CH3, DMA1_CH4>,
- mut device:  Device<LoRaRadio<SX1261_2<Spi<'static, SUBGHZSPI, DMA1_CH1, DMA1_CH2>, Stm32wlInterfaceVariant<'static, Output<'static, AnyPin>>>>, Crypto, LoraTimer, Rng<'static, RNG>>) {
+ mut device:  Device<LoRaRadio<SX1261_2<Spi<'static, SUBGHZSPI, DMA1_CH1, DMA1_CH2>, Stm32wlInterfaceVariant< Output<'static, AnyPin>>>>, Crypto, LoraTimer, Rng<'static, RNG>>) {
     Timer::after(Duration::from_millis(3000)).await;
     info!("Ready for send");
     let mut nmea = Nmea::default();
@@ -260,31 +268,29 @@ async fn sending(mut button: ExtiInput<'static, PA0>, mut uart: Uart<'static, US
          
                     info!("Reciving gps data");
                     let gga = from_utf8(&buf).unwrap();
-                    //let gga = "$GPGGA,092750.000,5321.6802,N,00630.3372,W,1,8,1.03,61.7,M,55.2,M,,*76";
-                    //nmea.parse(gga).unwrap();
-                    nmea.parse(gga).unwrap();
-                    
-                    let latitude =nmea.latitude().unwrap();
-                    let blat = latitude.to_ne_bytes();
-                    info!("Blat {}",blat);
-                    info!("Lat {}", latitude);
-                    info!("Blat tiìo lat {}",f64::from_ne_bytes(blat));
-                    let _longitude = nmea.longitude().unwrap().to_ne_bytes();
-                   /*  let payload = tmp.as_bytes();
-            
-                    let payload: [u8; 16] = {
-                    let mut payload:[u8; 16] = [0; 16];
-                    let (one, two) = payload.split_at_mut(8);
-                    one.copy_from_slice(&latitude);
-                    two.copy_from_slice(&longitude);
-                    payload
-                   };*/
 
-                    //info!("Latitude: {}",f64::from_ne_bytes(latitude));
-                    //info!("Longitude: {}", f64::from_ne_bytes(longitude));
-                    info!("Lenght gga: {}",buf.len());
-                    //info!("Payload {}",payload);
+                    nmea.parse(gga).unwrap();
+                    let latitude =nmea.latitude().unwrap().to_le_bytes();
+                    let longitude = nmea.longitude.unwrap().to_le_bytes();
+                    let altitude = nmea.altitude().unwrap().to_le_bytes();
+                
+
+                    let mut combined: ArrayVec<u8, 20> = ArrayVec::new( );
+                    combined.try_extend_from_slice(&latitude).unwrap();
+                    combined.try_extend_from_slice(&longitude).unwrap();
+                    combined.try_extend_from_slice(&altitude).unwrap();
+
+                    let payload: [u8;20] = combined.into_inner().unwrap();
+
+                    info!("Lat {}", f64::from_le_bytes(latitude));
+                    info!("Long {}", f64::from_le_bytes(longitude));
+                    info!("Alt {}", f32::from_le_bytes(altitude));
+
+                    info!("Lat {}",latitude);
+                    info!("Long {}", longitude);
+                    info!("Alt {}",altitude);
                     info!("buf from uart {}",buf);
+                    info!("Payload {}", payload);
                     info!(">Sending");
                     Timer::after(Duration::from_millis(1000)).await;
                     let dr = NR.load(Ordering::Relaxed);
@@ -298,7 +304,7 @@ async fn sending(mut button: ExtiInput<'static, PA0>, mut uart: Uart<'static, US
                         6 => device.set_datarate(region::DR::_6),
                         _ => device.set_datarate(region::DR::_0)
                     }
-                    while let Err(error) = device.send(&blat, 2, false).await{
+                    while let Err(error) = device.send(&payload, 2, false).await{
                         match error {
                             lorawan_device::async_device::Error::Radio(_) => defmt::error!("Sending failed: Radio"),
                             lorawan_device::async_device::Error::NetworkNotJoined => {defmt::error!("Sending failed: NetworkNotJoined")}
