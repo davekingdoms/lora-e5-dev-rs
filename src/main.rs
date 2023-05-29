@@ -256,7 +256,7 @@ async fn sending(mut button: ExtiInput<'static, PA0>, mut uart: Uart<'static, US
     Timer::after(Duration::from_millis(3000)).await;
     info!("Ready for send");
     let mut nmea = Nmea::default();
-    let mut buf = [0u8; 66];
+    let mut buf = [0u8; 82];
     loop {
 
     button.wait_for_falling_edge().await;
