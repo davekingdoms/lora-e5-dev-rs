@@ -135,6 +135,7 @@ bind_interrupts!(struct Irqs{
 
 bind_interrupts!(struct Irq{
     USART2 => interrupt<peripherals::USART2>;
+    USART1 => interrupt<peripherals::USART1>;
     
 });
 const LORAWAN_REGION: region::Region = region::Region::EU868; // warning: set this appropriately for the region
@@ -161,6 +162,7 @@ async fn main(spawner: Spawner) {
     let uartconfig = Config::default();
 
     let  usart2 = Uart::new(p.USART2, p.PA3, p.PA2, Irq, p.DMA1_CH3, p.DMA1_CH4, uartconfig);
+    let usart1 = Uart::new(p.USART1,p.PB7, p.PB6, Irq, p.DMA1_CH5, p.DMA1_CH6, uartconfig);
 
 
     let button = ExtiInput::new(Input::new(p.PA0, Pull::Up), p.EXTI0);
