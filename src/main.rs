@@ -19,7 +19,8 @@ use embassy_lora::iv::{InterruptHandler,Stm32wlInterfaceVariant};
 use embassy_lora::LoraTimer;
 use embassy_stm32::exti::ExtiInput;
 use embassy_stm32::gpio::{Level, Output, Pin, Speed, Input, Pull, AnyPin};
-use embassy_stm32::peripherals::{ PA0, PA1, SUBGHZSPI, DMA1_CH1, DMA1_CH2, RNG, PC6, USART2, DMA1_CH4, DMA1_CH3};
+
+use embassy_stm32::peripherals::{ PA0, PA1, SUBGHZSPI, DMA1_CH1, DMA1_CH2, RNG, PC6, USART2,USART1, DMA1_CH4, DMA1_CH3, DMA1_CH5, DMA1_CH6};
 use embassy_stm32::rng::Rng;
 use embassy_stm32::spi::Spi;
 use embassy_stm32::usart::{Config, InterruptHandler as interrupt,Uart};
@@ -159,10 +160,11 @@ async fn main(spawner: Spawner) {
     let _ctrl3 = Output::new(p.PC3.degrade(), Level::High, Speed::High);
     let iv = Stm32wlInterfaceVariant::new(Irqs, None, Some(ctrl2)).unwrap();
 
-    let uartconfig = Config::default();
+    let mut uartconfig = Config::default();
+    uartconfig.baudrate = 9600;
 
     let  usart2 = Uart::new(p.USART2, p.PA3, p.PA2, Irq, p.DMA1_CH3, p.DMA1_CH4, uartconfig);
-    let usart1 = Uart::new(p.USART1,p.PB7, p.PB6, Irq, p.DMA1_CH5, p.DMA1_CH6, uartconfig);
+    let mut usart1 = Uart::new(p.USART1,p.PB7, p.PB6, Irq, p.DMA1_CH5, p.DMA1_CH6, uartconfig);
 
 
     let button = ExtiInput::new(Input::new(p.PA0, Pull::Up), p.EXTI0);
@@ -239,12 +241,12 @@ async fn main(spawner: Spawner) {
         time = 15000;
     }*/
 };  
-
+usart1.write(b"$PMTK314,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0*35").await.unwrap();
 CHANNEL.send(AppState::Idle).await;
 defmt::info!("Lorawan joined<");
 
 info!("Spawn");
-spawner.spawn(sending(button, usart2,  device)).unwrap();
+spawner.spawn(sending(button, usart1,  device)).unwrap();
 spawner.spawn(button2_waiter(button2)).unwrap();
 spawner.spawn(dr_up(button3)).unwrap();
 info!("Spawned");
@@ -253,7 +255,7 @@ info!("Spawned");
 }
 
 #[embassy_executor::task]
-async fn sending(mut button: ExtiInput<'static, PA0>, mut uart: Uart<'static, USART2, DMA1_CH3, DMA1_CH4>,
+async fn sending(mut button: ExtiInput<'static, PA0>, mut uart: Uart<'static, USART1, DMA1_CH5, DMA1_CH6>,
  mut device:  Device<LoRaRadio<SX1261_2<Spi<'static, SUBGHZSPI, DMA1_CH1, DMA1_CH2>, Stm32wlInterfaceVariant< Output<'static, AnyPin>>>>, Crypto, LoraTimer, Rng<'static, RNG>>) {
     Timer::after(Duration::from_millis(3000)).await;
     info!("Ready for send");
@@ -269,8 +271,9 @@ async fn sending(mut button: ExtiInput<'static, PA0>, mut uart: Uart<'static, US
         Ok(_) => {
          
                     info!("Reciving gps data");
+                    info!("buf from uart {}",buf);
                     let gga = from_utf8(&buf).unwrap();
-
+                    info!("gga: {}", gga);
                     nmea.parse(gga).unwrap();
                     let latitude =nmea.latitude().unwrap().to_le_bytes();
                     let longitude = nmea.longitude.unwrap().to_le_bytes();
@@ -291,7 +294,7 @@ async fn sending(mut button: ExtiInput<'static, PA0>, mut uart: Uart<'static, US
                     info!("Lat {}",latitude);
                     info!("Long {}", longitude);
                     info!("Alt {}",altitude);
-                    info!("buf from uart {}",buf);
+ 
                     info!("Payload {}", payload);
                     info!(">Sending");
                     Timer::after(Duration::from_millis(1000)).await;
