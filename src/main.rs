@@ -8,6 +8,7 @@
 #![feature(generic_arg_infer)]
 
 
+
 use core::str::from_utf8;
 use core::sync::atomic::{ Ordering, AtomicU8};
 
@@ -246,7 +247,7 @@ CHANNEL.send(AppState::Idle).await;
 defmt::info!("Lorawan joined<");
 
 info!("Spawn");
-spawner.spawn(sending(button, usart1,  device)).unwrap();
+spawner.spawn(sending(button, usart1,usart2,  device)).unwrap();
 spawner.spawn(button2_waiter(button2)).unwrap();
 spawner.spawn(dr_up(button3)).unwrap();
 info!("Spawned");
@@ -255,7 +256,7 @@ info!("Spawned");
 }
 
 #[embassy_executor::task]
-async fn sending(mut button: ExtiInput<'static, PA0>, mut uart: Uart<'static, USART1, DMA1_CH5, DMA1_CH6>,
+async fn sending(mut button: ExtiInput<'static, PA0>, mut uart: Uart<'static, USART1, DMA1_CH5, DMA1_CH6>,mut uart2: Uart<'static, USART2, DMA1_CH3, DMA1_CH4>,
  mut device:  Device<LoRaRadio<SX1261_2<Spi<'static, SUBGHZSPI, DMA1_CH1, DMA1_CH2>, Stm32wlInterfaceVariant< Output<'static, AnyPin>>>>, Crypto, LoraTimer, Rng<'static, RNG>>) {
     Timer::after(Duration::from_millis(3000)).await;
     info!("Ready for send");
@@ -266,15 +267,45 @@ async fn sending(mut button: ExtiInput<'static, PA0>, mut uart: Uart<'static, US
     button.wait_for_falling_edge().await;
     CHANNEL.send(AppState::Sanding).await;
 
-    let result = uart.read_until_idle(&mut buf).await;
-    match result {
+loop{
+    info!("...Reciving gps data...");
+   match uart.read_until_idle(&mut buf).await{
         Ok(_) => {
-         
-                    info!("Reciving gps data");
+
+                    uart2.write(&buf).await.unwrap();
                     info!("buf from uart {}",buf);
-                    let gga = from_utf8(&buf).unwrap();
-                    info!("gga: {}", gga);
-                    nmea.parse(gga).unwrap();
+                    let sentence = from_utf8(&buf).unwrap();//truncate string. _until_idle not working
+                    let gga:&str;
+       
+                    if sentence.starts_with("$GPGGA"){
+                        gga = match  sentence.find('*') {
+                            Some(index) =>&sentence[..index + 3],
+                            None => &sentence,
+                        };
+                        info!("gga: {}", gga);
+                         nmea.parse(gga).unwrap();
+                        if nmea.fix_type.unwrap().is_valid(){
+                            
+                            break;
+                         }
+                         else{
+                            info!("Fix not available");
+                            Timer::after(Duration::from_millis(3000)).await;
+                            continue;
+                           
+                        }
+                    }else {
+                        info!("Not GGA sentence: {}", sentence); 
+                        Timer::after(Duration::from_millis(3000)).await;
+                    }
+            }
+        
+        Err(_err) => {
+            //Ignore eg. framing errors
+            }
+        };
+    }
+       
                     let latitude =nmea.latitude().unwrap().to_le_bytes();
                     let longitude = nmea.longitude.unwrap().to_le_bytes();
                     let altitude = nmea.altitude().unwrap().to_le_bytes();
@@ -329,13 +360,6 @@ async fn sending(mut button: ExtiInput<'static, PA0>, mut uart: Uart<'static, US
                         Timer::after(Duration::from_millis(20000)).await;
                         CHANNEL.send(AppState::Idle).await;
                         info!("...Ready for new send...")
-              
-            }
-        
-        Err(_err) => {
-            //Ignore eg. framing errors
-            }
-        }
      
     }
 }
