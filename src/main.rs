@@ -312,9 +312,15 @@ loop{
                 
 
                     let mut combined: ArrayVec<u8, 20> = ArrayVec::new( );
-                    combined.try_extend_from_slice(&latitude).unwrap();
-                    combined.try_extend_from_slice(&longitude).unwrap();
-                    combined.try_extend_from_slice(&altitude).unwrap();
+                   if combined.try_extend_from_slice(&latitude).is_err(){
+                    error!("Error extending combined with latitude");
+                   }
+                    if combined.try_extend_from_slice(&longitude).is_err(){
+                        error!("Error extending combined with longitude");
+                    }
+                    if combined.try_extend_from_slice(&altitude).is_err(){
+                        error!("Error extending combined with altitude")
+                    }
 
                     let payload: [u8;20] = combined.into_inner().unwrap();
 
