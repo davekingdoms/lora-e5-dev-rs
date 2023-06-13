@@ -242,7 +242,7 @@ async fn main(spawner: Spawner) {
         time = 15000;
     }*/
 };  
-usart1.write(b"$PMTK314,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0*35").await.unwrap();
+usart1.write(b"$PMTK314,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0*35\r\n").await.unwrap();
 CHANNEL.send(AppState::Idle).await;
 defmt::info!("Lorawan joined<");
 
