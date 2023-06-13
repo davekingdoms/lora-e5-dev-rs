@@ -141,6 +141,7 @@ bind_interrupts!(struct Irq{
     
 });
 const LORAWAN_REGION: region::Region = region::Region::EU868; // warning: set this appropriately for the region
+const DEFAULT_VALUE: f64 = -1.0;
 static NR:AtomicU8 = AtomicU8::new(0);
 static CHANNEL: Channel<ThreadModeRawMutex, AppState, 1> = Channel::new();
 
@@ -306,9 +307,9 @@ loop{
         };
     }
        
-                    let latitude =nmea.latitude().unwrap().to_le_bytes();
-                    let longitude = nmea.longitude.unwrap().to_le_bytes();
-                    let altitude = nmea.altitude().unwrap().to_le_bytes();
+                    let latitude =nmea.latitude().unwrap_or(DEFAULT_VALUE).to_le_bytes();
+                    let longitude = nmea.longitude.unwrap_or(DEFAULT_VALUE).to_le_bytes();
+                    let altitude = nmea.altitude().unwrap_or(DEFAULT_VALUE as f32).to_le_bytes();
                 
 
                     let mut combined: ArrayVec<u8, 20> = ArrayVec::new( );
