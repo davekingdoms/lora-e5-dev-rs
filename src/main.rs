@@ -442,7 +442,7 @@ async fn sending(
         let fcount = device.get_session().as_ref().unwrap().fcnt_up();
         defmt::info!("Fcount: {}", fcount);
         //defmt::info!("N,12158.3416 W,161229.487");
-        Timer::after(Duration::from_millis(20000)).await;
+        Timer::after(Duration::from_millis(1000)).await;
         CHANNEL.send(AppState::Idle).await;
         info!("...Ready for new send...")
     }
